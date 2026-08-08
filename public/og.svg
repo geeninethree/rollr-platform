@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#09090b"/>
+  <circle cx="980" cy="80" r="280" fill="#eab308" fill-opacity="0.12"/>
+  <rect x="72" y="72" width="64" height="64" rx="14" fill="#eab308"/>
+  <text x="104" y="116" text-anchor="middle" font-family="system-ui,sans-serif" font-size="36" font-weight="700" fill="#09090b">R</text>
+  <text x="152" y="118" font-family="system-ui,sans-serif" font-size="32" font-weight="600" letter-spacing="10" fill="#fafafa">ROLLR</text>
+  <text x="72" y="320" font-family="system-ui,sans-serif" font-size="56" font-weight="600" fill="#fafafa">Mumbai photographers &amp; editors.</text>
+  <text x="72" y="380" font-family="system-ui,sans-serif" font-size="28" fill="#a1a1aa">Zero commission. Direct after accept. List for ₹299/mo.</text>
+  <text x="72" y="540" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="#eab308">0% cut  ·  Protected contact  ·  PRO listing ₹299</text>
+</svg>
