@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Inbox,
+  Loader2,
   MessageCircle,
   XCircle,
 } from "lucide-react";
@@ -26,25 +27,74 @@ import {
 } from "@/lib/format";
 import {
   INQUIRIES_CHANGED,
+  fetchMyInquiries,
   listInquiries,
-  setInquiryStatus,
+  setInquiryStatusRemote,
 } from "@/lib/inquiries";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Inquiry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function CreatorInbox() {
   const [items, setItems] = useState<Inquiry[]>([]);
-  const [filter, setFilter] = useState<"all" | "pending" | "accepted" | "declined">(
-    "all"
-  );
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "accepted" | "declined"
+  >("all");
+  const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState<"supabase" | "local">("local");
+  const [error, setError] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
 
-  const refresh = useCallback(() => {
-    setItems(listInquiries());
+  const refresh = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setItems(listInquiries());
+      setSource("local");
+      setSignedIn(false);
+      setLoading(false);
+      return;
+    }
+
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      setItems(listInquiries());
+      setSource("local");
+      setSignedIn(false);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setSignedIn(true);
+    const result = await fetchMyInquiries(supabase, auth.user.id);
+    if (result.error) {
+      setError(result.error);
+      // merge remote error with local so nothing is lost
+      const local = listInquiries();
+      const byId = new Map<string, Inquiry>();
+      for (const i of [...result.items, ...local]) byId.set(i.id, i);
+      setItems(
+        Array.from(byId.values()).sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      );
+      setSource(result.items.length ? "supabase" : "local");
+    } else {
+      setError(null);
+      setItems(result.items);
+      setSource(result.listingIds.length ? "supabase" : "local");
+      if (result.listingIds.length === 0 && result.items.length === 0) {
+        setItems(listInquiries());
+        setSource("local");
+      }
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    refresh();
-    const onChange = () => refresh();
+    void refresh();
+    const onChange = () => void refresh();
     window.addEventListener(INQUIRIES_CHANGED, onChange);
     window.addEventListener("storage", onChange);
     return () => {
@@ -58,10 +108,16 @@ export function CreatorInbox() {
   );
   const pendingCount = items.filter((i) => i.status === "pending").length;
 
-  function accept(inquiry: Inquiry) {
-    const updated = setInquiryStatus(inquiry.id, "accepted");
+  async function accept(inquiry: Inquiry) {
+    const supabase = getSupabaseBrowserClient();
+    const result = await setInquiryStatusRemote(
+      supabase,
+      inquiry.id,
+      "accepted"
+    );
+    const updated = result.inquiry;
     if (!updated) return;
-    refresh();
+    await refresh();
     const url = creatorToClientWhatsAppUrl({
       clientWhatsapp: updated.client_whatsapp,
       clientName: updated.client_name,
@@ -73,24 +129,43 @@ export function CreatorInbox() {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  function decline(id: string) {
-    setInquiryStatus(id, "declined");
-    refresh();
+  async function decline(id: string) {
+    const supabase = getSupabaseBrowserClient();
+    await setInquiryStatusRemote(supabase, id, "declined");
+    await refresh();
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
-          Creator demo
+          Creator inbox
         </p>
         <h1 className="text-3xl font-semibold tracking-tight">Brief inbox</h1>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
           Client briefs land here. Accept to open WhatsApp to the{" "}
           <span className="text-foreground">client</span> — your number stays
-          private. (Demo uses browser storage; no login yet.)
+          private.
+          {source === "supabase"
+            ? " Synced to your account across devices."
+            : signedIn
+              ? " Sign in with the account that owns a published listing to see live briefs."
+              : " Sign in as a creator to receive briefs on every device."}
         </p>
+        {!signedIn && (
+          <Button asChild size="sm" variant="outline" className="mt-1">
+            <Link href="/login?next=/inbox">Sign in to sync inbox</Link>
+          </Button>
+        )}
       </div>
+
+      {error && (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+          {error}
+          {(error.includes("relation") || error.includes("schema")) &&
+            " — run migration 00007_waitlist_and_inquiries.sql"}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         {(
@@ -120,14 +195,18 @@ export function CreatorInbox() {
         </Button>
       </div>
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading briefs…
+        </div>
+      ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card/40 px-6 py-16 text-center">
           <Inbox className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-3 text-sm font-medium">No briefs here yet</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-            From Discover or Editors, open a profile and use{" "}
-            <strong className="text-foreground">Send brief</strong> as a client.
-            Then return here to accept.
+            Publish your portfolio, share your profile link, and clients use{" "}
+            <strong className="text-foreground">Send brief</strong>. Accept here
+            to WhatsApp them.
           </p>
         </div>
       ) : (
@@ -205,7 +284,7 @@ export function CreatorInbox() {
                     <Button
                       size="sm"
                       className="font-semibold"
-                      onClick={() => accept(inquiry)}
+                      onClick={() => void accept(inquiry)}
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Accept & open WhatsApp
@@ -213,7 +292,7 @@ export function CreatorInbox() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => decline(inquiry.id)}
+                      onClick={() => void decline(inquiry.id)}
                     >
                       <XCircle className="h-4 w-4" />
                       Decline

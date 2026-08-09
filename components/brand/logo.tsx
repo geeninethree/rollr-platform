@@ -5,22 +5,25 @@ type LogoProps = {
   className?: string;
   href?: string | null;
   showWordmark?: boolean;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 };
 
 /** ROLLR mark — gold square with film-frame R */
 export function LogoMark({
   className,
-  size = "sm",
+  size = "md",
 }: {
   className?: string;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
-  const dim = size === "md" ? "h-9 w-9" : "h-7 w-7";
+  const dim =
+    size === "lg" ? "h-11 w-11" : size === "md" ? "h-9 w-9" : "h-7 w-7";
+  const letter =
+    size === "lg" ? "text-base" : size === "md" ? "text-sm" : "text-[11px]";
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary text-primary-foreground shadow-sm shadow-primary/30",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/35",
         dim,
         className
       )}
@@ -41,7 +44,7 @@ export function LogoMark({
       <span
         className={cn(
           "relative font-bold tracking-tighter text-primary-foreground",
-          size === "md" ? "text-sm" : "text-[11px]"
+          letter
         )}
       >
         R
@@ -54,16 +57,18 @@ export function Logo({
   className,
   href = "/",
   showWordmark = true,
-  size = "sm",
+  size = "md",
 }: LogoProps) {
+  const word =
+    size === "lg" ? "text-xl" : size === "md" ? "text-lg" : "text-sm";
   const inner = (
-    <span className={cn("group inline-flex items-center gap-2", className)}>
+    <span className={cn("group inline-flex items-center gap-2.5", className)}>
       <LogoMark size={size} />
       {showWordmark && (
         <span
           className={cn(
-            "font-semibold tracking-[0.22em] text-foreground transition-colors group-hover:text-primary",
-            size === "md" ? "text-base" : "text-sm"
+            "font-semibold tracking-[0.18em] text-foreground transition-colors group-hover:text-primary",
+            word
           )}
         >
           ROLLR
@@ -74,7 +79,10 @@ export function Logo({
 
   if (href === null) return inner;
   return (
-    <Link href={href} className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
+    <Link
+      href={href}
+      className="shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       {inner}
     </Link>
   );

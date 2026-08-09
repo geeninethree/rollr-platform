@@ -24,15 +24,22 @@ type AuthFormProps = {
   next?: string;
   /** Invite code from ?ref= */
   referralCode?: string;
+  /** Prefill role (e.g. creator from ?role=creator) */
+  defaultRole?: UserRole;
 };
 
-export function AuthForm({ mode, next = "/", referralCode }: AuthFormProps) {
+export function AuthForm({
+  mode,
+  next = "/",
+  referralCode,
+  defaultRole,
+}: AuthFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<UserRole>(
-    referralCode ? "creator" : "client"
+    defaultRole || (referralCode ? "creator" : "client")
   );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

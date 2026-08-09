@@ -38,11 +38,6 @@ const included = [
     body: "No lead caps. Accept as many qualified requests as you can handle.",
   },
   {
-    icon: Sparkles,
-    title: "PRO badge & gold placement",
-    body: "Stand out in Photographers and Editors with priority sort and a gold border.",
-  },
-  {
     icon: LayoutGrid,
     title: "Shoot + edit on one profile",
     body: "List as photographer, editor, or both — hybrids show in both directories.",
@@ -57,14 +52,19 @@ const included = [
     title: "Qualified leads, not spam",
     body: "Clients send a real brief (date, budget, scope) before you engage.",
   },
+  {
+    icon: BadgeCheck,
+    title: "Your portfolio, your rates",
+    body: "Category package pricing, areas, and work samples — clients see the real you.",
+  },
 ];
 
 const comparison = [
   { feature: "Monthly price", rollr: "₹299", typical: "15–30% of each job" },
   { feature: "Commission on bookings", rollr: "0%", typical: "High" },
-  { feature: "Client briefs", rollr: "Unlimited", typical: "Capped / paid boosts" },
+  { feature: "Client briefs", rollr: "Unlimited", typical: "Often capped or pay-per-lead" },
   { feature: "Contact control", rollr: "You accept first", typical: "Number often public" },
-  { feature: "Shoot + edit listing", rollr: "One profile", typical: "Separate or messy" },
+  { feature: "Shoot + edit listing", rollr: "Same profile", typical: "Separate or messy" },
 ];
 
 export default function ListProfilePage() {
@@ -74,11 +74,41 @@ export default function ListProfilePage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"shoot" | "edit" | "both">("both");
   const [category, setCategory] = useState("Wedding");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
-    setSubmitted(true);
+    setFormError(null);
+    setSubmitting(true);
+    try {
+      const { getSupabaseBrowserClient } = await import(
+        "@/lib/supabase/client"
+      );
+      const { submitWaitlist } = await import("@/lib/waitlist");
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
+        setFormError(
+          "Supabase is not configured. Contact the ROLLR team or try again later."
+        );
+        return;
+      }
+      const result = await submitWaitlist(supabase, {
+        full_name: name,
+        email,
+        phone,
+        role,
+        primary_category: category,
+      });
+      if (!result.ok) {
+        setFormError(result.error || "Could not save. Try again.");
+        return;
+      }
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -91,10 +121,8 @@ export default function ListProfilePage() {
               For creators
             </Badge>
             <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-              One listing.{" "}
+              Unlimited briefs. Zero commission.{" "}
               <span className="text-primary">₹299/mo.</span>
-              <br />
-              Zero commission forever.
             </h1>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
               Built for Mumbai photographers, videographers, and editors who want
@@ -103,7 +131,7 @@ export default function ListProfilePage() {
 
             <div className="mx-auto mt-8 max-w-sm rounded-2xl border-2 border-primary/40 bg-card p-6 shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Pro listing
+                Creator membership
               </p>
               <p className="mt-2 flex items-baseline justify-center gap-1">
                 <span className="text-5xl font-semibold tracking-tight text-primary">
@@ -119,10 +147,11 @@ export default function ListProfilePage() {
                 size="lg"
                 className="mt-5 w-full font-semibold shadow-md shadow-primary/20"
               >
-                <a href="#join">Join the waitlist</a>
+                <a href="#join">Register interest</a>
               </Button>
               <p className="mt-3 text-[11px] text-muted-foreground">
-                Payments not live yet — early creators get first access.
+                Payments not live yet — no charge today. We&apos;ll contact early
+                creators when billing opens.
               </p>
             </div>
 
@@ -197,7 +226,7 @@ export default function ListProfilePage() {
                 ))}
               </ul>
               <Button asChild className="mt-6 font-semibold">
-                <Link href="/studio">Try the studio builder</Link>
+                <Link href="/studio">Open portfolio builder</Link>
               </Button>
             </div>
             <div>
@@ -215,7 +244,7 @@ export default function ListProfilePage() {
                   },
                   {
                     t: "Submit for review",
-                    d: "Draft → Pending review when checks pass (studio demo).",
+                    d: "Draft → Pending review when checks pass (portfolio builder).",
                   },
                   {
                     t: "Human approve (live product)",
@@ -334,25 +363,47 @@ export default function ListProfilePage() {
           <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-start">
             <div className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-tight">
-                Join the creator waitlist
+                Register interest
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Payments and self-serve listing ship next. Early signups get
-                first access to Pro at ₹299/mo. No charge today.
+                No payment system yet. This form saves your details to our
+                waitlist so the ROLLR team can review and invite you. No charge
+                today. Ready now? You can also sign up and publish a portfolio
+                directly (alpha).
               </p>
+              <ol className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <strong className="text-foreground">1.</strong> Register
+                  interest (this form) — we get your email/WhatsApp
+                </li>
+                <li>
+                  <strong className="text-foreground">2.</strong> We mark you
+                  approved and send the signup link
+                </li>
+                <li>
+                  <strong className="text-foreground">3.</strong> Or skip ahead:{" "}
+                  <Link
+                    href="/signup?role=creator&next=/studio"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sign up → Portfolio → Publish
+                  </Link>{" "}
+                  to go live on the directory
+                </li>
+              </ol>
               <Button asChild variant="outline" size="sm">
-                <Link href="/">See how clients browse →</Link>
+                <Link href="/guides/creators">Creator guide →</Link>
               </Button>
             </div>
 
             <Card className="border-primary/25 bg-card shadow-lg shadow-primary/5">
               <CardHeader>
                 <CardTitle className="text-lg">
-                  {submitted ? "You're on the list" : "Request Pro access"}
+                  {submitted ? "You're on the waitlist" : "Creator interest"}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   {submitted
-                    ? "We'll reach out when onboarding opens."
+                    ? "We received your details and will follow up."
                     : "Tell us who you are — takes under a minute."}
                 </p>
               </CardHeader>
@@ -364,16 +415,18 @@ export default function ListProfilePage() {
                       Thanks, {name.split(" ")[0] || "there"}.
                     </p>
                     <p className="max-w-xs text-sm text-muted-foreground">
-                      Interest saved for Pro at ₹299/mo
-                      {email ? ` · ${email}` : ""}. Demo only — nothing emailed
-                      yet.
+                      Saved for review
+                      {email ? ` · ${email}` : ""}. You can also build your
+                      portfolio now while you wait.
                     </p>
                     <Button asChild variant="outline" className="mt-2">
-                      <Link href="/">Browse the directory</Link>
+                      <Link href="/signup?role=creator&next=/studio">
+                        Sign up as creator
+                      </Link>
                     </Button>
                   </div>
                 ) : (
-                  <form onSubmit={onSubmit} className="space-y-4">
+                  <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-muted-foreground">
                         I am a…
@@ -480,11 +533,36 @@ export default function ListProfilePage() {
                         ))}
                       </select>
                     </div>
-                    <Button type="submit" className="w-full font-semibold">
-                      Join waitlist — ₹299/mo Pro
+                    {formError && (
+                      <p
+                        className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                        role="alert"
+                      >
+                        {formError}
+                      </p>
+                    )}
+                    <Button
+                      type="submit"
+                      className="w-full font-semibold"
+                      disabled={submitting}
+                    >
+                      {submitting
+                        ? "Saving…"
+                        : "Register interest — ₹299/mo"}
                     </Button>
                     <p className="text-center text-[11px] text-muted-foreground">
-                      No payment taken. Demo form stores nothing on a server.
+                      No payment taken. By submitting you agree to our{" "}
+                      <Link href="/terms" className="text-primary hover:underline">
+                        Terms
+                      </Link>{" "}
+                      and{" "}
+                      <Link
+                        href="/privacy"
+                        className="text-primary hover:underline"
+                      >
+                        Privacy Policy
+                      </Link>
+                      .
                     </p>
                   </form>
                 )}

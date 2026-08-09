@@ -24,7 +24,6 @@ import {
   formatPriceInr,
   hasService,
   isHybrid,
-  isProCreator,
   priceLabelFrom,
 } from "@/lib/format";
 import { workCount } from "@/lib/portfolio";
@@ -40,7 +39,6 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
   const hybrid = isHybrid(creator);
   const canShoot = hasService(creator, "shoot");
   const canEdit = hasService(creator, "edit");
-  const pro = isProCreator(creator);
 
   const defaultTab: ServiceMode =
     initialTab && hasService(creator, initialTab)
@@ -95,11 +93,6 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         <div className="absolute right-4 top-4 flex flex-col items-end gap-1.5">
-          {pro && (
-            <Badge className="bg-primary font-semibold tracking-wide text-primary-foreground hover:bg-primary">
-              PRO
-            </Badge>
-          )}
           {hybrid && (
             <Badge className="border border-border bg-background/85 text-foreground backdrop-blur-sm hover:bg-background/85">
               Shoots + edits

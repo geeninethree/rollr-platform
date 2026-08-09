@@ -202,8 +202,17 @@ export default function SupabaseSetupPage() {
               — avatar &amp; cover image uploads
             </li>
             <li>
-              <code className="text-primary">.env.local</code> — your keys (never
-              commit)
+              <code className="text-primary">
+                supabase/migrations/00007_waitlist_and_inquiries.sql
+              </code>{" "}
+              — waitlist store + client briefs (inbox / WhatsApp)
+            </li>
+            <li>
+              <code className="text-primary">.env.local</code> — keys +{" "}
+              <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code> for{" "}
+              <Link href="/admin" className="text-primary underline">
+                /admin
+              </Link>
             </li>
           </ul>
         </div>

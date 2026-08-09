@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, IndianRupee, Percent, Sparkles } from "lucide-react";
+import { ArrowRight, MessageSquare, Percent, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export function CreatorPricingCta({
       <aside
         id="for-creators"
         className={cn(
-          "pro-frame relative w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-card to-card p-4 sm:max-w-sm lg:w-[20.5rem] animate-rise",
+          "relative w-full shrink-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-card p-4 sm:max-w-sm lg:w-[20.5rem] animate-rise",
           className
         )}
       >
@@ -32,26 +32,25 @@ export function CreatorPricingCta({
           </p>
           <div>
             <p className="text-sm font-semibold leading-snug tracking-tight text-foreground">
-              List on ROLLR for{" "}
+              Unlimited briefs. Zero commission.{" "}
               <span className="text-primary">₹299/mo</span>
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              Get in front of Mumbai clients. Keep every rupee you invoice — 0%
-              commission on bookings.
+              Get in front of Mumbai clients. Keep every rupee you invoice.
             </p>
           </div>
           <ul className="space-y-1.5 text-[11px] text-muted-foreground">
             <li className="inline-flex w-full items-center gap-1.5">
               <Percent className="h-3 w-3 shrink-0 text-primary" />
-              0% commission
+              0% commission on bookings
+            </li>
+            <li className="inline-flex w-full items-center gap-1.5">
+              <MessageSquare className="h-3 w-3 shrink-0 text-primary" />
+              Unlimited client briefs
             </li>
             <li className="inline-flex w-full items-center gap-1.5">
               <Sparkles className="h-3 w-3 shrink-0 text-primary" />
-              Unlimited briefs
-            </li>
-            <li className="inline-flex w-full items-center gap-1.5">
-              <IndianRupee className="h-3 w-3 shrink-0 text-primary" />
-              PRO badge &amp; priority
+              Shoot + edit on one profile
             </li>
           </ul>
           <Button
@@ -83,7 +82,8 @@ export function CreatorPricingCta({
             For photographers &amp; editors
           </p>
           <p className="mt-1 text-lg font-semibold">
-            List for <span className="text-primary">₹299/mo</span> · 0% commission
+            Unlimited briefs. Zero commission.{" "}
+            <span className="text-primary">₹299/mo</span>
           </p>
         </div>
         <Button asChild className="font-semibold">

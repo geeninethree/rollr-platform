@@ -27,8 +27,8 @@ const publicLinks = [
 ];
 
 const creatorLinks = [
-  { href: "/list", label: "List for ₹299/mo", desc: "Pricing & waitlist" },
-  { href: "/studio", label: "Studio", desc: "Build your listing" },
+  { href: "/list", label: "List for ₹299/mo", desc: "Pricing & interest list" },
+  { href: "/studio", label: "Portfolio", desc: "Build your listing" },
   { href: "/inbox", label: "Inbox", desc: "Briefs (demo)" },
 ];
 
@@ -132,9 +132,9 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-5">
-          <Logo />
+          <Logo size="lg" />
 
           <nav
             className="hidden items-center gap-0.5 md:flex"

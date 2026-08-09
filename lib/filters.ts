@@ -1,4 +1,4 @@
-import { isProCreator, displayPriceForMode } from "@/lib/format";
+import { displayPriceForMode } from "@/lib/format";
 import type { CreatorCardModel, SearchFilters, ServiceMode } from "@/lib/types";
 
 export const EMPTY_FILTERS: SearchFilters = {
@@ -15,7 +15,6 @@ export function hasActiveFilters(filters: SearchFilters, mode: ServiceMode) {
   return (
     filters.locations.length > 0 ||
     filters.categories.length > 0 ||
-    filters.proOnly ||
     filters.under15k ||
     Boolean(filters.eventDate) ||
     (mode === "shoot" && filters.alsoEdits) ||
@@ -63,10 +62,6 @@ export function filterCreators(
       if (!hit) return false;
     }
 
-    if (filters.proOnly && !isProCreator(creator)) {
-      return false;
-    }
-
     const price = displayPriceForMode(creator, mode);
     if (filters.under15k && price > 15000) {
       return false;
@@ -75,12 +70,8 @@ export function filterCreators(
     return true;
   });
 
-  return filtered.sort((a, b) => {
-    const proA = isProCreator(a) ? 1 : 0;
-    const proB = isProCreator(b) ? 1 : 0;
-    if (proA !== proB) return proB - proA;
-    return b.rating - a.rating;
-  });
+  // Flat sort for now (rating). No boosted / PRO priority until tiers exist.
+  return filtered.sort((a, b) => b.rating - a.rating);
 }
 
 export function shootersOnly(creators: CreatorCardModel[]) {

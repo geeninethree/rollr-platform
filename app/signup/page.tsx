@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSessionUser } from "@/lib/auth";
 
 type PageProps = {
-  searchParams?: { next?: string; ref?: string };
+  searchParams?: { next?: string; ref?: string; role?: string };
 };
 
 export const metadata = {
@@ -16,20 +16,25 @@ export const metadata = {
 
 export default async function SignupPage({ searchParams }: PageProps) {
   const user = await getSessionUser();
-  const next = searchParams?.next || (searchParams?.ref ? "/studio" : "/");
+  const asCreator =
+    searchParams?.role === "creator" || Boolean(searchParams?.ref);
+  const next =
+    searchParams?.next || (asCreator ? "/studio" : "/");
   if (user) redirect(next);
 
   return (
     <div className="bg-grid-fade">
       <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12 sm:px-6">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Logo href="/" />
+          <Logo href="/" size="lg" />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Create your account
+              {asCreator ? "Sign up as creator" : "Create your account"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Join as a client (hire) or creator (list for ₹299/mo).
+              {asCreator
+                ? "Build your portfolio and list for ₹299/mo — 0% commission."
+                : "Join as a client (hire) or creator (list for ₹299/mo)."}
             </p>
           </div>
         </div>
@@ -43,6 +48,7 @@ export default async function SignupPage({ searchParams }: PageProps) {
               mode="signup"
               next={next}
               referralCode={searchParams?.ref}
+              defaultRole={asCreator ? "creator" : undefined}
             />
           </CardContent>
         </Card>

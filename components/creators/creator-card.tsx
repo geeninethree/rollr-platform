@@ -10,7 +10,6 @@ import {
   displayPriceForMode,
   initials,
   isHybrid,
-  isProCreator,
   priceLabelFrom,
 } from "@/lib/format";
 import { coverForMode, featuredWorks, workCount } from "@/lib/portfolio";
@@ -30,7 +29,6 @@ export function CreatorCard({
   surface = "shoot",
   index = 0,
 }: CreatorCardProps) {
-  const pro = isProCreator(creator);
   const hybrid = isHybrid(creator);
   const isEditSurface = surface === "edit";
 
@@ -68,11 +66,8 @@ export function CreatorCard({
   return (
     <Card
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden bg-card transition-all duration-300 hover:-translate-y-1 animate-rise",
-        delayClass,
-        pro
-          ? "pro-frame"
-          : "border-border hover:border-primary/25 hover:shadow-lg hover:shadow-black/20"
+        "group relative flex h-full flex-col overflow-hidden border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg hover:shadow-black/20 animate-rise",
+        delayClass
       )}
     >
       <Link
@@ -93,11 +88,6 @@ export function CreatorCard({
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
 
         <div className="absolute right-3 top-3 z-[1] flex flex-col items-end gap-1.5">
-          {pro && (
-            <Badge className="bg-primary font-semibold tracking-wide text-primary-foreground shadow-md shadow-primary/30 hover:bg-primary">
-              PRO
-            </Badge>
-          )}
           {hybrid && (
             <Badge
               variant="secondary"

@@ -13,8 +13,9 @@ import {
   hasSavedClientBrief,
   saveClientBrief,
 } from "@/lib/client-brief";
-import { createInquiry } from "@/lib/inquiries";
+import { createInquiryRemote } from "@/lib/inquiries";
 import { LOCATIONS, SHOOT_CATEGORIES, EDIT_SPECIALTIES } from "@/lib/mock-data";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BriefType, CreatorCardModel } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -130,7 +131,7 @@ export function SendBriefDialog({
         )
       : Array.from(new Set([...creator.categories, ...SHOOT_CATEGORIES]));
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!clientName.trim() || !clientWhatsapp.trim() || !message.trim()) {
@@ -156,20 +157,40 @@ export function SendBriefDialog({
       setUsingSaved(true);
     }
 
-    const inquiry = createInquiry({
-      creator_id: creator.id,
-      creator_name: creator.full_name,
-      client_name: clientName,
-      client_whatsapp: clientWhatsapp,
-      client_email: clientEmail,
-      brief_type: briefType,
-      event_date: eventDate,
-      location,
-      category,
-      budget,
-      message,
-    });
-    setSubmittedId(inquiry.id);
+    const supabase = getSupabaseBrowserClient();
+    let clientUserId: string | null = null;
+    if (supabase) {
+      const { data } = await supabase.auth.getUser();
+      clientUserId = data.user?.id ?? null;
+    }
+
+    const result = await createInquiryRemote(
+      supabase,
+      {
+        creator_id: creator.id,
+        creator_name: creator.full_name,
+        client_name: clientName,
+        client_whatsapp: clientWhatsapp,
+        client_email: clientEmail,
+        brief_type: briefType,
+        event_date: eventDate,
+        location,
+        category,
+        budget,
+        message,
+      },
+      clientUserId
+    );
+
+    if (!result.inquiry) {
+      setError(result.error || "Could not send brief.");
+      return;
+    }
+    if (result.error && result.source === "local") {
+      // Saved locally — still OK for same-browser demo
+      console.warn(result.error);
+    }
+    setSubmittedId(result.inquiry.id);
   }
 
   function clearSaved() {
@@ -254,7 +275,7 @@ export function SendBriefDialog({
             </div>
           </div>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
             {usingSaved && hasSavedClientBrief() && (
               <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background/50 px-3 py-2.5 text-xs">
                 <div className="flex gap-2 text-muted-foreground">

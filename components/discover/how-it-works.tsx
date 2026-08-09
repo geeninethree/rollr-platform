@@ -40,7 +40,7 @@ export function HowItWorks() {
             href="/studio"
             className="text-xs font-semibold text-primary hover:underline"
           >
-            Studio →
+            Portfolio →
           </Link>
         </div>
         <ol className="mt-3 space-y-3">

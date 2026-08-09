@@ -73,7 +73,7 @@ export function UserMenu({ email, fullName, role }: UserMenuProps) {
             onClick={() => setOpen(false)}
           >
             <User className="h-3.5 w-3.5" />
-            {role === "creator" ? "Creator studio" : "List as creator"}
+            {role === "creator" ? "My portfolio" : "List as creator"}
           </Link>
           <button
             type="button"

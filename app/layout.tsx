@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: "%s · ROLLR",
   },
   description:
-    "Book Mumbai photographers and editors with 0% commission. Creators list for ₹299/mo — unlimited briefs, PRO placement.",
+    "Book Mumbai photographers and editors with 0% commission. Creators list for ₹299/mo — unlimited briefs.",
   applicationName: "ROLLR",
   keywords: [
     "Mumbai photographer",

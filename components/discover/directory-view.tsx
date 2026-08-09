@@ -102,15 +102,14 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
                 No published creators yet
               </p>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-                Be the first. Sign up as a creator, build your listing in Studio,
-                and hit Save &amp; publish.
+                Be the first. Sign up as a creator, build your portfolio, and
+                publish your listing.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-2">
                 <Button asChild className="font-semibold">
-                  <Link href="/signup?next=/studio">Sign up as creator</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/studio">Open Studio</Link>
+                  <Link href="/signup?role=creator&next=/studio">
+                    Sign up as creator
+                  </Link>
                 </Button>
               </div>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clapperboard, Search, Video, X } from "lucide-react";
+import { Clapperboard, FileText, Search, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,6 @@ export function HeroSearch({
         { id: "Colour grade", kind: "category" as const },
         { id: "Under ₹15k", kind: "under15k" as const },
         { id: "Also shoots", kind: "alsoShoots" as const },
-        { id: "Pro only", kind: "proOnly" as const },
       ]
     : [
         { id: "Wedding", kind: "category" as const },
@@ -57,7 +56,6 @@ export function HeroSearch({
         { id: "Corporate", kind: "category" as const },
         { id: "Under ₹15k", kind: "under15k" as const },
         { id: "Also edits", kind: "alsoEdits" as const },
-        { id: "Pro only", kind: "proOnly" as const },
       ];
 
   return (
@@ -121,7 +119,7 @@ export function HeroSearch({
       {/* High-impact search panel */}
       <div className="rounded-2xl border-2 border-primary/25 bg-card p-4 shadow-[0_0_0_1px_hsl(var(--primary)/0.08),0_16px_40px_-20px_hsl(var(--primary)/0.35)] sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             Find {isEdit ? "an editor" : "a photographer"}
           </p>
           <span className="text-xs tabular-nums text-muted-foreground">
@@ -134,7 +132,7 @@ export function HeroSearch({
             <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Location
             </label>
-            <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-input bg-background p-2">
+            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-input bg-background p-2">
               {LOCATIONS.map((loc) => {
                 const selected = filters.locations.includes(loc);
                 return (
@@ -210,7 +208,7 @@ export function HeroSearch({
             </div>
           </div>
 
-          <div className="flex items-end gap-2">
+          <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-end">
             {active && (
               <Button
                 type="button"
@@ -227,10 +225,22 @@ export function HeroSearch({
               type="button"
               onClick={onSearch}
               size="lg"
-              className="h-10 w-full min-w-[7.5rem] font-semibold lg:w-auto"
+              className="h-10 min-w-[7.5rem] font-semibold"
             >
               <Search className="h-4 w-4" />
               Search
+            </Button>
+            <Button
+              asChild
+              type="button"
+              variant="outline"
+              size="lg"
+              className="h-10 min-w-[7.5rem] font-semibold"
+            >
+              <Link href="/job-board">
+                <FileText className="h-4 w-4" />
+                Post a brief
+              </Link>
             </Button>
           </div>
         </div>
@@ -245,8 +255,6 @@ export function HeroSearch({
               selected = filters.categories.includes(chip.id);
             } else if (chip.kind === "under15k") {
               selected = filters.under15k;
-            } else if (chip.kind === "proOnly") {
-              selected = filters.proOnly;
             } else if (chip.kind === "alsoEdits") {
               selected = filters.alsoEdits;
             } else if (chip.kind === "alsoShoots") {
@@ -265,8 +273,6 @@ export function HeroSearch({
                     });
                   } else if (chip.kind === "under15k") {
                     onChange({ ...filters, under15k: !filters.under15k });
-                  } else if (chip.kind === "proOnly") {
-                    onChange({ ...filters, proOnly: !filters.proOnly });
                   } else if (chip.kind === "alsoEdits") {
                     onChange({ ...filters, alsoEdits: !filters.alsoEdits });
                   } else if (chip.kind === "alsoShoots") {

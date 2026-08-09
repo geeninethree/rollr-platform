@@ -1,20 +1,14 @@
 import Link from "next/link";
-import { JobCard } from "@/components/job-board/job-card";
+import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MOCK_JOBS } from "@/lib/mock-data";
 
 export const metadata = {
   title: "Job Board",
   description:
-    "Open shoot and edit briefs for Mumbai creators. Pitch free, chat after accept.",
+    "Post open shoot and edit briefs for Mumbai creators. Pitch free, chat after accept.",
 };
 
 export default function JobBoardPage() {
-  const jobs = [...MOCK_JOBS].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-
   return (
     <div className="bg-grid-fade">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -25,8 +19,9 @@ export default function JobBoardPage() {
             </p>
             <h1 className="text-3xl font-semibold tracking-tight">Job board</h1>
             <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Shoot, edit, and full-package briefs. Creators pitch free; contact
-              stays protected until there&apos;s a mutual fit.
+              Don&apos;t want to pick a creator yet? Post a brief here and let
+              photographers and editors pitch. Contact stays protected until
+              there&apos;s a mutual fit.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -39,18 +34,24 @@ export default function JobBoardPage() {
           </div>
         </div>
 
-        <div className="mb-6 rounded-lg border border-border bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {jobs.length} open briefs
-          </span>
-          {" · "}
-          Includes edit-only posts. Pitch is demo-local for now.
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
+        <div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
+          <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
+          <p className="mt-4 text-base font-medium text-foreground">
+            No open briefs yet
+          </p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Public job posts aren&apos;t live yet. For now, open a creator
+            profile and use <strong className="text-foreground">Send brief</strong>{" "}
+            — they accept and WhatsApp you.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <Button asChild className="font-semibold">
+              <Link href="/">Browse photographers</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/editors">Browse editors</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

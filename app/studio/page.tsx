@@ -241,14 +241,14 @@ export default function StudioPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
-              Creator studio · Supabase
+              Creator portfolio
             </p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Your listing
+              Your portfolio
             </h1>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Saves to your Supabase account. Portfolio works are stored as image
-              URLs for now (file upload later).
+              Build and publish your ROLLR listing. Avatar and cover can be
+              uploaded; portfolio stills can use image URLs for now.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

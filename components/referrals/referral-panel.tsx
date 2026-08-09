@@ -87,7 +87,7 @@ export function ReferralPanel({ userId }: { userId: string }) {
         <p className="text-xs text-muted-foreground">
           Planned: share your invite link; when someone signs up and{" "}
           <strong className="text-foreground">publishes</strong> a listing, you
-          earn ₹{REFERRAL_CASHBACK_INR} cashback. Tracking may work in Studio;
+          earn ₹{REFERRAL_CASHBACK_INR} cashback. Tracking may work in Portfolio;
           cashback is <strong className="text-foreground">not paid out</strong>{" "}
           during alpha.
         </p>
