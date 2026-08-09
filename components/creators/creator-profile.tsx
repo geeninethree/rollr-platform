@@ -18,6 +18,7 @@ import { SendBriefButton } from "@/components/inquiry/send-brief-button";
 import { ExternalLinksSection } from "@/components/portfolio/external-links";
 import { ListingStatusBadge } from "@/components/portfolio/listing-status-badge";
 import { PortfolioGallery } from "@/components/portfolio/portfolio-gallery";
+import { ReviewsSection } from "@/components/creators/reviews-section";
 import { ProfileShareCard } from "@/components/share/profile-share-card";
 import {
   displayPriceForMode,
@@ -162,10 +163,17 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <Star className="h-4 w-4 fill-primary text-primary" />
-              <span className="font-medium text-foreground">
-                {creator.rating.toFixed(1)}
-              </span>
-              ({creator.review_count} reviews)
+              {creator.review_count > 0 ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    {creator.rating.toFixed(1)}
+                  </span>
+                  ({creator.review_count} review
+                  {creator.review_count === 1 ? "" : "s"})
+                </>
+              ) : (
+                <span className="font-medium text-foreground">New on ROLLR</span>
+              )}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <MapPin className="h-4 w-4 text-primary/80" />
@@ -209,6 +217,12 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
           />
 
           <ExternalLinksSection links={creator.links} />
+
+          <ReviewsSection
+            creatorId={creator.id}
+            rating={creator.rating}
+            reviewCount={creator.review_count}
+          />
         </div>
 
         <aside className="h-fit space-y-4 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-20">

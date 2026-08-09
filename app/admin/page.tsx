@@ -11,7 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { isAdminEmail } from "@/lib/admin";
+import { checkIsAdmin } from "@/lib/admin";
+import {
+  fetchListingsByStatus,
+  setListingStatus,
+  type AdminListingRow,
+} from "@/lib/admin-listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   fetchWaitlist,
@@ -21,18 +26,22 @@ import {
 } from "@/lib/waitlist";
 import { cn } from "@/lib/utils";
 
-const STATUSES: WaitlistStatus[] = [
+const WAITLIST_STATUSES: WaitlistStatus[] = [
   "pending",
   "contacted",
   "approved",
   "rejected",
 ];
 
+type Tab = "waitlist" | "listings";
+
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [allowed, setAllowed] = useState(false);
+  const [tab, setTab] = useState<Tab>("listings");
   const [rows, setRows] = useState<WaitlistSignup[]>([]);
+  const [listings, setListings] = useState<AdminListingRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -48,17 +57,34 @@ export default function AdminPage() {
     const userEmail = auth.user?.email ?? null;
     setEmail(userEmail);
 
-    if (!userEmail || !isAdminEmail(userEmail)) {
+    let isAdminFlag: boolean | null = null;
+    if (auth.user) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+      isAdminFlag = (prof?.is_admin as boolean | undefined) ?? null;
+    }
+
+    const ok = await checkIsAdmin({ email: userEmail, isAdminFlag });
+    if (!ok) {
       setAllowed(false);
       setLoading(false);
       return;
     }
 
     setAllowed(true);
-    const result = await fetchWaitlist(supabase);
-    if (result.error) setError(result.error);
+
+    const [wl, li] = await Promise.all([
+      fetchWaitlist(supabase),
+      fetchListingsByStatus(supabase, "pending_review"),
+    ]);
+    if (wl.error) setError(wl.error);
+    else if (li.error) setError(li.error);
     else setError(null);
-    setRows(result.rows);
+    setRows(wl.rows);
+    setListings(li.rows);
     setLoading(false);
   }, []);
 
@@ -85,6 +111,19 @@ export default function AdminPage() {
     );
   }
 
+  async function setListing(id: string, status: "published" | "rejected" | "draft") {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    setBusyId(id);
+    const result = await setListingStatus(supabase, id, status);
+    setBusyId(null);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setListings((prev) => prev.filter((l) => l.id !== id));
+  }
+
   if (loading) {
     return (
       <div className="mx-auto flex max-w-4xl items-center gap-2 px-4 py-16 text-sm text-muted-foreground">
@@ -99,10 +138,9 @@ export default function AdminPage() {
         <Shield className="mx-auto h-8 w-8 text-muted-foreground" />
         <h1 className="text-xl font-semibold">Admin only</h1>
         <p className="text-sm text-muted-foreground">
-          Sign in with an email listed in{" "}
-          <code className="text-primary">ADMIN_EMAILS</code> (or{" "}
-          <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code>) to
-          review waitlist signups.
+          Sign in as an admin (
+          <code className="text-primary">profiles.is_admin</code> or{" "}
+          <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code>).
           {email ? (
             <>
               {" "}
@@ -124,7 +162,7 @@ export default function AdminPage() {
     );
   }
 
-  const pending = rows.filter((r) => r.status === "pending").length;
+  const pendingWl = rows.filter((r) => r.status === "pending").length;
 
   return (
     <div className="bg-grid-fade">
@@ -135,10 +173,11 @@ export default function AdminPage() {
               Ops
             </p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Waitlist
+              Admin
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {rows.length} total · {pending} pending · signed in as {email}
+              {listings.length} listings pending · {pendingWl} waitlist pending ·{" "}
+              {email}
             </p>
           </div>
           <Button
@@ -154,113 +193,179 @@ export default function AdminPage() {
           </Button>
         </div>
 
+        <div className="flex gap-2">
+          {(
+            [
+              ["listings", `Listings (${listings.length})`],
+              ["waitlist", `Waitlist (${rows.length})`],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium",
+                tab === key
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-secondary text-muted-foreground"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {error && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
             {error}
-            {(error.includes("relation") || error.includes("schema")) &&
-              " — run migration 00007_waitlist_and_inquiries.sql in Supabase."}
+            {(error.includes("relation") ||
+              error.includes("schema") ||
+              error.includes("is_admin")) &&
+              " — run migration 00008_admin_reviews_portfolio.sql"}
           </p>
         )}
 
-        {rows.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-6 py-16 text-center text-sm text-muted-foreground">
-            No waitlist entries yet. When someone uses Register interest on{" "}
-            <Link href="/list" className="text-primary hover:underline">
-              /list
-            </Link>
-            , they appear here and in Supabase → Table Editor →{" "}
-            <code>waitlist_signups</code>.
-          </div>
-        ) : (
+        {tab === "listings" && (
           <ul className="space-y-3">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <Card className="border-border bg-card/80">
-                  <CardHeader className="pb-2">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-base">
-                          {row.full_name}
-                        </CardTitle>
-                        <p className="mt-0.5 text-sm text-muted-foreground">
-                          <a
-                            href={`mailto:${row.email}`}
-                            className="text-primary hover:underline"
-                          >
-                            {row.email}
-                          </a>
-                          {row.phone ? ` · ${row.phone}` : ""}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          row.status === "pending" ? "default" : "secondary"
-                        }
-                        className="capitalize"
-                      >
-                        {row.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <p className="text-muted-foreground">
-                      Role:{" "}
-                      <span className="text-foreground">
-                        {row.role === "both"
-                          ? "Photographer + editor"
-                          : row.role === "shoot"
-                            ? "Photographer"
-                            : "Editor"}
-                      </span>
-                      {row.primary_category
-                        ? ` · ${row.primary_category}`
-                        : ""}
-                      {" · "}
-                      {new Date(row.created_at).toLocaleString("en-IN")}
-                    </p>
-                    {row.notes && (
-                      <p className="rounded-md bg-secondary/60 px-3 py-2 text-xs">
-                        {row.notes}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-1.5">
-                      {STATUSES.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          disabled={busyId === row.id || row.status === s}
-                          onClick={() => void setStatus(row.id, s)}
-                          className={cn(
-                            "rounded-md border px-2 py-1 text-[11px] font-medium capitalize transition-colors disabled:opacity-50",
-                            row.status === s
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-secondary text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                    {row.status === "approved" && (
-                      <p className="text-xs text-muted-foreground">
-                        Next: email them{" "}
-                        <code className="text-primary">
-                          /signup?role=creator&amp;next=/studio
-                        </code>{" "}
-                        to build portfolio and publish.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+            {listings.length === 0 ? (
+              <li className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+                No listings waiting for review. Creators use Portfolio → Submit
+                for review.
               </li>
-            ))}
+            ) : (
+              listings.map((row) => (
+                <li key={row.id}>
+                  <Card className="border-border bg-card/80">
+                    <CardHeader className="pb-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-base">
+                            {row.profiles?.full_name || "Creator"}
+                          </CardTitle>
+                          <p className="mt-0.5 text-sm text-muted-foreground">
+                            {row.profiles?.email}
+                            {row.tagline ? ` · ${row.tagline}` : ""}
+                          </p>
+                        </div>
+                        <Badge className="bg-amber-500/15 text-amber-200">
+                          Pending review
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <p className="text-muted-foreground">
+                        {(row.categories || []).join(", ") || "No categories"}
+                        {" · "}
+                        {(row.sub_regions || []).slice(0, 4).join(", ") ||
+                          "No areas"}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/creators/${row.id}`} target="_blank">
+                            Preview
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="font-semibold"
+                          disabled={busyId === row.id}
+                          onClick={() => void setListing(row.id, "published")}
+                        >
+                          Approve &amp; publish
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busyId === row.id}
+                          onClick={() => void setListing(row.id, "rejected")}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))
+            )}
           </ul>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          You can also open Supabase Dashboard → Table Editor →{" "}
-          <code>waitlist_signups</code> for raw rows / export.
-        </p>
+        {tab === "waitlist" && (
+          <ul className="space-y-3">
+            {rows.length === 0 ? (
+              <li className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+                No waitlist entries yet.
+              </li>
+            ) : (
+              rows.map((row) => (
+                <li key={row.id}>
+                  <Card className="border-border bg-card/80">
+                    <CardHeader className="pb-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-base">
+                            {row.full_name}
+                          </CardTitle>
+                          <p className="mt-0.5 text-sm text-muted-foreground">
+                            <a
+                              href={`mailto:${row.email}`}
+                              className="text-primary hover:underline"
+                            >
+                              {row.email}
+                            </a>
+                            {row.phone ? ` · ${row.phone}` : ""}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            row.status === "pending" ? "default" : "secondary"
+                          }
+                          className="capitalize"
+                        >
+                          {row.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <p className="text-muted-foreground">
+                        Role:{" "}
+                        <span className="text-foreground">
+                          {row.role === "both"
+                            ? "Photographer + editor"
+                            : row.role === "shoot"
+                              ? "Photographer"
+                              : "Editor"}
+                        </span>
+                        {row.primary_category
+                          ? ` · ${row.primary_category}`
+                          : ""}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WAITLIST_STATUSES.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            disabled={busyId === row.id || row.status === s}
+                            onClick={() => void setStatus(row.id, s)}
+                            className={cn(
+                              "rounded-md border px-2 py-1 text-[11px] font-medium capitalize disabled:opacity-50",
+                              row.status === s
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-secondary text-muted-foreground"
+                            )}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
       </div>
     </div>
   );

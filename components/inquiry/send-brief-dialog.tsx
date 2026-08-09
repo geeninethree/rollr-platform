@@ -187,10 +187,26 @@ export function SendBriefDialog({
       return;
     }
     if (result.error && result.source === "local") {
-      // Saved locally — still OK for same-browser demo
       console.warn(result.error);
     }
     setSubmittedId(result.inquiry.id);
+
+    // Email creator (Resend if configured) — fire and forget
+    if (result.source === "supabase") {
+      void fetch("/api/notify/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creator_id: creator.id,
+          creator_name: creator.full_name,
+          client_name: clientName.trim(),
+          category,
+          location,
+          event_date: eventDate,
+          message: message.trim(),
+        }),
+      }).catch(() => undefined);
+    }
   }
 
   function clearSaved() {

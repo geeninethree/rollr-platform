@@ -65,7 +65,8 @@ export function QualityChecklist({ creator, score }: QualityChecklistProps) {
         ))}
       </ul>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Required checks must pass before a listing can be submitted for review.
+        Required checks must pass before you submit for review. ROLLR approves
+        before your profile appears in the directory.
         External links help trust but never replace on-platform work.
       </p>
     </div>

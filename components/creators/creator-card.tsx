@@ -150,9 +150,13 @@ export function CreatorCard({
           <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Star className="h-3.5 w-3.5 fill-primary text-primary" />
             <span className="font-medium text-foreground">
-              {creator.rating.toFixed(1)}
+              {creator.review_count > 0
+                ? creator.rating.toFixed(1)
+                : "New"}
             </span>
-            <span>({creator.review_count})</span>
+            {creator.review_count > 0 && (
+              <span>({creator.review_count})</span>
+            )}
           </div>
         </div>
 

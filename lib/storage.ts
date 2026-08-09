@@ -1,15 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type UploadKind = "avatar" | "cover";
+export type UploadKind = "avatar" | "cover" | "work";
 
 const BUCKET: Record<UploadKind, string> = {
   avatar: "avatars",
   cover: "covers",
+  work: "portfolio",
 };
 
 const MAX_BYTES: Record<UploadKind, number> = {
   avatar: 5 * 1024 * 1024,
   cover: 8 * 1024 * 1024,
+  work: 10 * 1024 * 1024,
 };
 
 function extFromFile(file: File): string {
@@ -42,7 +44,7 @@ export async function uploadCreatorImage(
   }
 
   const ext = extFromFile(file);
-  const path = `${userId}/${kind}-${Date.now()}.${ext}`;
+  const path = `${userId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
   const bucket = BUCKET[kind];
 
   const { error: uploadError } = await supabase.storage
@@ -60,8 +62,12 @@ export async function uploadCreatorImage(
       msg.toLowerCase().includes("not found") ||
       msg.toLowerCase().includes("row-level security")
     ) {
+      const mig =
+        kind === "work"
+          ? "00008_admin_reviews_portfolio.sql"
+          : "00006_storage_avatars_covers.sql";
       return {
-        error: `${msg} — run supabase/migrations/00006_storage_avatars_covers.sql in the SQL Editor.`,
+        error: `${msg} — run supabase/migrations/${mig} in the SQL Editor.`,
       };
     }
     return { error: msg };

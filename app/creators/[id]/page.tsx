@@ -32,14 +32,21 @@ export default async function CreatorProfilePage({
   const { creator } = await fetchCreatorById(supabase, params.id);
   if (!creator) notFound();
 
-  // Only show published (or allow draft owner later)
-  if (creator.listing_status !== "published") {
-    notFound();
-  }
-
+  // Directory only lists published; direct URL allows admin preview of pending.
   const tabParam = searchParams?.tab;
   const initialTab: ServiceMode | undefined =
     tabParam === "edit" || tabParam === "shoot" ? tabParam : undefined;
 
-  return <CreatorProfile creator={creator} initialTab={initialTab} />;
+  return (
+    <>
+      {creator.listing_status !== "published" && (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100">
+          Preview only — listing status:{" "}
+          <strong>{creator.listing_status}</strong>. Not shown in the public
+          directory until published.
+        </div>
+      )}
+      <CreatorProfile creator={creator} initialTab={initialTab} />
+    </>
+  );
 }

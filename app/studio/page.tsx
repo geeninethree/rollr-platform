@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,7 @@ import {
   minCategoryPrice,
   syncCategoryPrices,
 } from "@/lib/pricing";
+import { uploadCreatorImage } from "@/lib/storage";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   draftToCreator,
@@ -55,6 +56,9 @@ export default function StudioPage() {
   const [listingId, setListingId] = useState<string | null>(null);
   const [workUrl, setWorkUrl] = useState(PRESET_WORKS[0]);
   const [workRole, setWorkRole] = useState<"shoot" | "edit" | "both">("shoot");
+  const [uploadingWorks, setUploadingWorks] = useState(false);
+  const [uploadWorkError, setUploadWorkError] = useState<string | null>(null);
+  const workFileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -179,6 +183,39 @@ export default function StudioPage() {
     updateLocal({ works: [...draft.works, item] });
   }
 
+  async function uploadWorks(files: FileList | null) {
+    if (!files?.length || !userId) return;
+    setUploadWorkError(null);
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setUploadWorkError("Supabase not configured.");
+      return;
+    }
+    setUploadingWorks(true);
+    const next: PortfolioItem[] = [...draft.works];
+    let featuredCount = next.filter((w) => w.is_featured).length;
+    for (const file of Array.from(files).slice(0, 12)) {
+      const result = await uploadCreatorImage(supabase, userId, file, "work");
+      if (result.error || !result.url) {
+        setUploadWorkError(result.error || "Upload failed");
+        continue;
+      }
+      next.push({
+        id: `w_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        url: result.url,
+        media_type: "image",
+        role: workRole,
+        is_featured: featuredCount < 3,
+        sort_order: next.length,
+        title: file.name.replace(/\.[^.]+$/, "").slice(0, 40) || "Work",
+        category: draft.categories[0],
+      });
+      if (featuredCount < 3) featuredCount += 1;
+    }
+    updateLocal({ works: next });
+    setUploadingWorks(false);
+  }
+
   function removeWork(id: string) {
     updateLocal({ works: draft.works.filter((w) => w.id !== id) });
   }
@@ -220,8 +257,10 @@ export default function StudioPage() {
     setStatusMsg(
       opts?.submitForReview
         ? result.draft?.listing_status === "published"
-          ? "Listing saved and published. Share your profile link below."
-          : "Saved as draft — finish required quality checks to publish."
+          ? "Listing updated and still live."
+          : result.draft?.listing_status === "pending_review"
+            ? "Submitted for review. You’ll go live after ROLLR approves your portfolio."
+            : "Saved as draft — finish required quality checks to submit."
         : "Listing saved to Supabase."
     );
   }
@@ -471,17 +510,11 @@ export default function StudioPage() {
               <CardHeader>
                 <CardTitle className="text-base">Portfolio on ROLLR</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Min 3 pieces to publish. Image URLs for now.
+                  Min 3 pieces to submit for review. Upload images or paste URLs.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    value={workUrl}
-                    onChange={(e) => setWorkUrl(e.target.value)}
-                    placeholder="https://… image URL"
-                    className="bg-background/50"
-                  />
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                   <select
                     value={workRole}
                     onChange={(e) =>
@@ -493,11 +526,45 @@ export default function StudioPage() {
                     <option value="edit">Edit</option>
                     <option value="both">Both</option>
                   </select>
-                  <Button type="button" onClick={addWork} className="font-semibold">
-                    <Plus className="h-4 w-4" />
-                    Add
+                  <input
+                    ref={workFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      void uploadWorks(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    className="font-semibold"
+                    disabled={uploadingWorks || !userId}
+                    onClick={() => workFileRef.current?.click()}
+                  >
+                    {uploadingWorks ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    {uploadingWorks ? "Uploading…" : "Upload images"}
                   </Button>
                 </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    value={workUrl}
+                    onChange={(e) => setWorkUrl(e.target.value)}
+                    placeholder="Or paste https://… image URL"
+                    className="bg-background/50"
+                  />
+                  <Button type="button" variant="outline" onClick={addWork}>
+                    Add URL
+                  </Button>
+                </div>
+                {uploadWorkError && (
+                  <p className="text-xs text-destructive">{uploadWorkError}</p>
+                )}
                 <div className="flex flex-wrap gap-1.5">
                   {PRESET_WORKS.map((u) => (
                     <button
@@ -693,10 +760,11 @@ export default function StudioPage() {
                 disabled={saving}
                 onClick={() => void persist({ submitForReview: true })}
               >
-                Save &amp; publish
+                Submit for review
               </Button>
               <p className="text-center text-[11px] text-muted-foreground">
-                Publish requires the quality checklist. Sets role to{" "}
+                Submit for review when checklist is green. ROLLR approves before
+                you appear in the directory. Sets role to{" "}
                 <strong className="text-foreground">creator</strong> on save.
               </p>
             </div>

@@ -31,6 +31,7 @@ import {
   listInquiries,
   setInquiryStatusRemote,
 } from "@/lib/inquiries";
+import { markJobCompleteAndCreateReviewLink } from "@/lib/reviews";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Inquiry } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -132,6 +133,35 @@ export function CreatorInbox() {
   async function decline(id: string) {
     const supabase = getSupabaseBrowserClient();
     await setInquiryStatusRemote(supabase, id, "declined");
+    await refresh();
+  }
+
+  async function requestReview(inquiry: Inquiry) {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    const result = await markJobCompleteAndCreateReviewLink(
+      supabase,
+      inquiry.id
+    );
+    if (result.error || !result.url) {
+      setError(result.error || "Could not create review link");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(result.url);
+    } catch {
+      /* ignore */
+    }
+    // Open WhatsApp to client with review link
+    const phone = inquiry.client_whatsapp.replace(/\D/g, "");
+    const digits =
+      phone.length === 10 ? `91${phone}` : phone.startsWith("0") ? `91${phone.slice(1)}` : phone;
+    const text = `Hi ${inquiry.client_name}, thanks for working with me via ROLLR. If you have a minute, a short review helps other Mumbai clients: ${result.url}`;
+    window.open(
+      `https://wa.me/${digits}?text=${encodeURIComponent(text)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
     await refresh();
   }
 
@@ -246,31 +276,44 @@ export function CreatorInbox() {
                     </p>
                   )}
                   {inquiry.status === "accepted" && (
-                    <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs">
+                    <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs">
                       <p className="font-medium text-foreground">
                         Client WhatsApp (shared after accept)
                       </p>
-                      <p className="mt-1 font-mono text-muted-foreground">
+                      <p className="font-mono text-muted-foreground">
                         {inquiry.client_whatsapp}
                       </p>
-                      <Button asChild size="sm" className="mt-3 font-semibold">
-                        <a
-                          href={creatorToClientWhatsAppUrl({
-                            clientWhatsapp: inquiry.client_whatsapp,
-                            clientName: inquiry.client_name,
-                            creatorName: inquiry.creator_name,
-                            briefType: inquiry.brief_type,
-                            eventDate: inquiry.event_date,
-                            location: inquiry.location,
-                          })}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      <div className="flex flex-wrap gap-2">
+                        <Button asChild size="sm" className="font-semibold">
+                          <a
+                            href={creatorToClientWhatsAppUrl({
+                              clientWhatsapp: inquiry.client_whatsapp,
+                              clientName: inquiry.client_name,
+                              creatorName: inquiry.creator_name,
+                              briefType: inquiry.brief_type,
+                              eventDate: inquiry.event_date,
+                              location: inquiry.location,
+                            })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            WhatsApp client
+                            <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                          </a>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void requestReview(inquiry)}
                         >
-                          <MessageCircle className="h-4 w-4" />
-                          Message client on WhatsApp
-                          <ExternalLink className="h-3.5 w-3.5 opacity-70" />
-                        </a>
-                      </Button>
+                          Job done · request review
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        After the job, request a review — link copies + opens WA
+                        so ratings stay on ROLLR (not only in WhatsApp chat).
+                      </p>
                     </div>
                   )}
                   {inquiry.status === "pending" && (

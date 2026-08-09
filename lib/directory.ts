@@ -33,6 +33,8 @@ type Row = {
   listing_status: string | null;
   works: PortfolioItem[] | unknown;
   category_prices: Record<string, number> | null;
+  rating_avg?: number | null;
+  review_count?: number | null;
   profiles: {
     full_name: string;
     email: string;
@@ -95,8 +97,8 @@ export function rowToCreatorCard(row: Row): CreatorCardModel {
       "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80",
     portfolio: shootUrls.length ? shootUrls : finalWorks.map((w) => w.url),
     tagline: row.tagline || "Mumbai visual creator",
-    rating: 0,
-    review_count: 0,
+    rating: Number(row.rating_avg ?? 0) || 0,
+    review_count: Number(row.review_count ?? 0) || 0,
     response_label: "Message after brief accept",
     service_modes: modes.length ? modes : ["shoot"],
     edit_starting_price: Number(row.edit_starting_price ?? 0),
@@ -142,6 +144,8 @@ export async function fetchPublishedCreators(
       listing_status,
       works,
       category_prices,
+      rating_avg,
+      review_count,
       profiles!inner (
         full_name,
         email,
@@ -150,7 +154,7 @@ export async function fetchPublishedCreators(
     `
     )
     .eq("listing_status", "published")
-    .order("is_featured", { ascending: false });
+    .order("review_count", { ascending: false });
 
   if (error) {
     // Fallback without category_prices if migration 00004 not applied
@@ -238,6 +242,8 @@ export async function fetchCreatorById(
       listing_status,
       works,
       category_prices,
+      rating_avg,
+      review_count,
       profiles!inner (
         full_name,
         email,

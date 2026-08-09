@@ -188,12 +188,19 @@ export async function saveCreatorListing(
   let listingStatus = draft.listing_status;
   if (opts?.submitForReview) {
     const creator = draftToCreator(draft);
+    // Manual vetting: never auto-publish. Admin approves from /admin.
     listingStatus = meetsPublishRequirements(creator)
       ? "pending_review"
       : "draft";
   }
 
-  if (opts?.submitForReview && listingStatus === "pending_review") {
+  // Already published creators can re-save without unpublishing unless they
+  // only hit "save draft" without submit. If they submit again while published, keep published.
+  if (
+    opts?.submitForReview &&
+    draft.listing_status === "published" &&
+    meetsPublishRequirements(draftToCreator(draft))
+  ) {
     listingStatus = "published";
   }
 
@@ -221,7 +228,8 @@ export async function saveCreatorListing(
     listing_status: listingStatus,
     works: draft.works,
     category_prices,
-    is_featured: listingStatus === "published",
+    // Featured flag reserved for later tiers — not auto on publish
+    is_featured: false,
     sub_status: listingStatus === "published" ? "active" : "inactive",
   };
 

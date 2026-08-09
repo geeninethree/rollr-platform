@@ -58,7 +58,12 @@ export default function CreatorGuidePage() {
           portfolio works
         </li>
         <li>
-          Pass quality checks → <strong>Save &amp; publish</strong>
+          Pass quality checks → <strong>Submit for review</strong>
+        </li>
+        <li>
+          ROLLR admin approves on{" "}
+          <code className="text-primary">/admin</code> → status becomes{" "}
+          <strong>published</strong>
         </li>
         <li>
           Profile appears on{" "}
@@ -69,7 +74,7 @@ export default function CreatorGuidePage() {
           <Link href="/editors" className="text-primary">
             Editors
           </Link>{" "}
-          on the live Vercel site (published listings only)
+          (published only)
         </li>
       </ol>
 

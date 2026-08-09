@@ -70,8 +70,12 @@ export function filterCreators(
     return true;
   });
 
-  // Flat sort for now (rating). No boosted / PRO priority until tiers exist.
-  return filtered.sort((a, b) => b.rating - a.rating);
+  // Prefer reviewed creators, then higher rating, then name.
+  return filtered.sort((a, b) => {
+    if (b.review_count !== a.review_count) return b.review_count - a.review_count;
+    if (b.rating !== a.rating) return b.rating - a.rating;
+    return a.full_name.localeCompare(b.full_name);
+  });
 }
 
 export function shootersOnly(creators: CreatorCardModel[]) {

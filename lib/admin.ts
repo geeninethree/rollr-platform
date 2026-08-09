@@ -1,7 +1,6 @@
 /**
  * Admin allowlist for waitlist / ops UI.
- * Set ADMIN_EMAILS or NEXT_PUBLIC_ADMIN_EMAILS (comma-separated) in env.
- * Example: you@gmail.com,partner@gmail.com
+ * Prefer profiles.is_admin (migration 00008). Fallback: NEXT_PUBLIC_ADMIN_EMAILS.
  */
 export function getAdminEmails(): string[] {
   const raw =
@@ -19,4 +18,13 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   const list = getAdminEmails();
   if (list.length === 0) return false;
   return list.includes(email.trim().toLowerCase());
+}
+
+/** Check admin via email allowlist OR profiles.is_admin from Supabase */
+export async function checkIsAdmin(input: {
+  email: string | null | undefined;
+  isAdminFlag?: boolean | null;
+}): Promise<boolean> {
+  if (input.isAdminFlag === true) return true;
+  return isAdminEmail(input.email);
 }
