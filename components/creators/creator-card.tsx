@@ -141,7 +141,7 @@ export function CreatorCard({
 
       <CardContent className="relative z-[1] flex flex-1 flex-col gap-3 p-4 pointer-events-none">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-sm font-semibold text-gold">
             {priceLabelFrom(price)}
             <span className="ml-1 text-[10px] font-normal text-muted-foreground">
               pkg

@@ -131,10 +131,10 @@ export function Navbar() {
     pathname.startsWith("/login") || pathname.startsWith("/signup");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+    <header className="nav-frost sticky top-0 z-50">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-5">
-          <Logo size="lg" />
+          <Logo size="md" />
 
           <nav
             className="hidden items-center gap-0.5 md:flex"
@@ -147,10 +147,10 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors whitespace-nowrap pressable",
+                    "rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap pressable",
                     active
                       ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   )}
                 >
                   {link.label}
@@ -249,9 +249,10 @@ export function Navbar() {
               <Button
                 asChild
                 size="sm"
+                variant="outline"
                 className={cn(
-                  "font-semibold shadow-sm shadow-primary/20 pressable",
-                  onList && "ring-2 ring-primary/40"
+                  "font-semibold pressable",
+                  onList && "ring-2 ring-primary/30"
                 )}
               >
                 <Link href="/list">

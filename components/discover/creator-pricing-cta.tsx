@@ -18,22 +18,18 @@ export function CreatorPricingCta({
       <aside
         id="for-creators"
         className={cn(
-          "relative w-full shrink-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-card p-4 sm:max-w-sm lg:w-[20.5rem] animate-rise",
+          "relative w-full shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-lg shadow-black/25 sm:max-w-sm lg:w-[20.5rem] animate-rise",
           className
         )}
       >
-        <div
-          className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/25 blur-2xl"
-          aria-hidden
-        />
         <div className="relative space-y-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             For photographers &amp; editors
           </p>
           <div>
             <p className="text-sm font-semibold leading-snug tracking-tight text-foreground">
               Unlimited briefs. Zero commission.{" "}
-              <span className="text-primary">₹299/mo</span>
+              <span className="text-gold">₹299/mo</span>
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
               Get in front of Mumbai clients. Keep every rupee you invoice.
@@ -72,7 +68,7 @@ export function CreatorPricingCta({
     <section
       id="for-creators"
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-card p-5 sm:p-7",
+        "relative overflow-hidden rounded-2xl border border-border bg-card p-5 sm:p-7 shadow-lg shadow-black/25",
         className
       )}
     >
@@ -83,7 +79,7 @@ export function CreatorPricingCta({
           </p>
           <p className="mt-1 text-lg font-semibold">
             Unlimited briefs. Zero commission.{" "}
-            <span className="text-primary">₹299/mo</span>
+            <span className="text-gold">₹299/mo</span>
           </p>
         </div>
         <Button asChild className="font-semibold">

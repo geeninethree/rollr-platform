@@ -26,7 +26,7 @@ export function SendBriefButton({
   size = "sm",
   className,
   label = "Send brief",
-  variant = "default",
+  variant = "outline",
 }: SendBriefButtonProps) {
   const [open, setOpen] = useState(false);
 

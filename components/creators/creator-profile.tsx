@@ -230,7 +230,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Packages from
             </p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">
+            <p className="mt-1 text-2xl font-semibold text-gold">
               {priceLabelFrom(price)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">

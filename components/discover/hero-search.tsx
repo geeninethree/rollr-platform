@@ -63,14 +63,12 @@ export function HeroSearch({
       {/* Headline left · creator pricing card top-right */}
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
         <div className="min-w-0 flex-1 space-y-4">
-          <div className="max-w-xl space-y-2">
-            <p className="text-overline text-primary">
+          <div className="max-w-xl space-y-3">
+            <p className="text-sm text-muted-foreground">
               Mumbai · 0% commission
             </p>
-            <h1 className="text-balance font-semibold tracking-tight">
-              {isEdit
-                ? "Hire editors & colourists"
-                : "Book photographers & videographers"}
+            <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.5rem]">
+              {isEdit ? "Find an editor" : "Find a photographer"}
             </h1>
             <p className="text-sm text-muted-foreground">
               {resultCount} creators · open a profile to send a brief
@@ -116,11 +114,11 @@ export function HeroSearch({
         <CreatorPricingCta variant="hero" />
       </div>
 
-      {/* High-impact search panel */}
-      <div className="rounded-2xl border-2 border-primary/25 bg-card p-4 shadow-[0_0_0_1px_hsl(var(--primary)/0.08),0_16px_40px_-20px_hsl(var(--primary)/0.35)] sm:p-5">
+      {/* Search panel — product-precise, not heavy gold chrome */}
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-lg shadow-black/30 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-            Find {isEdit ? "an editor" : "a photographer"}
+          <p className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+            Search {isEdit ? "editors" : "photographers"}
           </p>
           <span className="text-xs tabular-nums text-muted-foreground">
             {resultCount} available
