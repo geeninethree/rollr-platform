@@ -134,7 +134,7 @@ export function HeroSearch({
             <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Location
             </label>
-            <div className="flex max-h-16 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-input bg-background p-2">
+            <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-input bg-background p-2">
               {LOCATIONS.map((loc) => {
                 const selected = filters.locations.includes(loc);
                 return (

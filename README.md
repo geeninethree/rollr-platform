@@ -74,6 +74,21 @@ Follow prompts; then `vercel --prod` for production.
 | `/inbox` | Creator brief inbox (demo) |
 | `/job-board` | Open briefs |
 | `/list` | ₹299 plan + portfolio requirements + waitlist |
+| `/setup/supabase` | Supabase connection checklist + health test |
+| `/login` · `/signup` | Auth (email/password + magic link) |
+| `/auth/callback` | OAuth / magic-link session exchange |
+
+## Supabase
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. In **SQL Editor**, run in order:
+   - `supabase/migrations/00001_init.sql`
+   - `supabase/migrations/00002_rls_and_profile_trigger.sql`
+3. Copy **Project URL** + **anon public** key from **Settings → API** into `.env.local` (see `.env.local.example`)
+4. Restart `npm run dev`
+5. Open [/setup/supabase](http://localhost:3000/setup/supabase) or `GET /api/supabase/health`
+
+Directory UI still uses mock data until live queries are wired. Auth UI is the next slice after connection works.
 
 ## Demo notes for viewers
 

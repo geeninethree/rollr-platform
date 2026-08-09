@@ -1,4 +1,4 @@
-import { isProCreator } from "@/lib/format";
+import { isProCreator, displayPriceForMode } from "@/lib/format";
 import type { CreatorCardModel, SearchFilters, ServiceMode } from "@/lib/types";
 
 export const EMPTY_FILTERS: SearchFilters = {
@@ -67,10 +67,7 @@ export function filterCreators(
       return false;
     }
 
-    const price =
-      mode === "edit"
-        ? (creator.edit_starting_price ?? creator.starting_price)
-        : creator.starting_price;
+    const price = displayPriceForMode(creator, mode);
     if (filters.under15k && price > 15000) {
       return false;
     }

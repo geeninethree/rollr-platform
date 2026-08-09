@@ -98,6 +98,11 @@ export type CreatorCardModel = {
   listing_status: ListingStatus;
   /** 0–100 quality score for ranking / vetting UX */
   quality_score: number;
+  /**
+   * Starting package price per category (INR), e.g. { Wedding: 25000 }.
+   * Not hourly — package floor for that job type.
+   */
+  category_prices: Record<string, number>;
 };
 
 export type JobBrief = {

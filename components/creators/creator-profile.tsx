@@ -18,12 +18,14 @@ import { SendBriefButton } from "@/components/inquiry/send-brief-button";
 import { ExternalLinksSection } from "@/components/portfolio/external-links";
 import { ListingStatusBadge } from "@/components/portfolio/listing-status-badge";
 import { PortfolioGallery } from "@/components/portfolio/portfolio-gallery";
+import { ProfileShareCard } from "@/components/share/profile-share-card";
 import {
   displayPriceForMode,
   formatPriceInr,
   hasService,
   isHybrid,
   isProCreator,
+  priceLabelFrom,
 } from "@/lib/format";
 import { workCount } from "@/lib/portfolio";
 import type { BriefType, CreatorCardModel, ServiceMode } from "@/lib/types";
@@ -219,17 +221,38 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
         <aside className="h-fit space-y-4 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-20">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Starting from
+              Packages from
             </p>
             <p className="mt-1 text-2xl font-semibold text-foreground">
-              {formatPriceInr(price)}
+              {priceLabelFrom(price)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {tab === "edit"
-                ? "Edit rate — final quote depends on runtime and deliverables."
-                : "Shoot day rate — final quote depends on hours and deliverables."}
+              Category package floors — not hourly. Final quote depends on
+              scope &amp; deliverables.
             </p>
           </div>
+
+          {Object.keys(creator.category_prices || {}).length > 0 && (
+            <div className="rounded-lg border border-border/80 bg-background/50 p-3">
+              <p className="text-xs font-medium text-foreground">By category</p>
+              <ul className="mt-2 space-y-1.5">
+                {Object.entries(creator.category_prices)
+                  .filter(([, p]) => p > 0)
+                  .sort((a, b) => a[1] - b[1])
+                  .map(([cat, p]) => (
+                    <li
+                      key={cat}
+                      className="flex items-center justify-between gap-2 text-xs"
+                    >
+                      <span className="text-muted-foreground">{cat}</span>
+                      <span className="font-medium tabular-nums">
+                        From {formatPriceInr(p)}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
 
           <SendBriefButton
             creator={creator}
@@ -238,6 +261,12 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
             size="lg"
             className="w-full"
             label="Send brief"
+          />
+
+          <ProfileShareCard
+            listingId={creator.id}
+            creatorName={creator.full_name}
+            compact
           />
 
           <div className="flex items-start gap-2 rounded-lg border border-border/80 bg-background/50 p-3 text-xs text-muted-foreground">

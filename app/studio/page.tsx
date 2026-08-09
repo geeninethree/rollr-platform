@@ -1,22 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Cloud, Loader2, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListingStatusBadge } from "@/components/portfolio/listing-status-badge";
 import { QualityChecklist } from "@/components/portfolio/quality-checklist";
+import { ReferralPanel } from "@/components/referrals/referral-panel";
+import { ProfileShareCard } from "@/components/share/profile-share-card";
+import { ImageUploadField } from "@/components/studio/image-upload-field";
+import {
+  loadCreatorListing,
+  saveCreatorListing,
+} from "@/lib/creator-listing";
 import { LOCATIONS, SHOOT_CATEGORIES } from "@/lib/mock-data";
+import {
+  formatFromPrice,
+  getPriceGuide,
+  minCategoryPrice,
+  syncCategoryPrices,
+} from "@/lib/pricing";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   draftToCreator,
   emptyStudioDraft,
-  loadStudioDraft,
-  saveStudioDraft,
-  submitDraftForReview,
   type StudioDraft,
 } from "@/lib/studio";
 import type { PortfolioItem, ServiceMode } from "@/lib/types";
@@ -32,23 +44,64 @@ const PRESET_WORKS = [
 ];
 
 export default function StudioPage() {
+  const router = useRouter();
   const [draft, setDraft] = useState<StudioDraft>(emptyStudioDraft);
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [listingId, setListingId] = useState<string | null>(null);
   const [workUrl, setWorkUrl] = useState(PRESET_WORKS[0]);
   const [workRole, setWorkRole] = useState<"shoot" | "edit" | "both">("shoot");
 
-  useEffect(() => {
-    setDraft(loadStudioDraft());
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setError("Supabase is not configured.");
+      setLoading(false);
+      setMounted(true);
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.replace(
+        `/login?next=${encodeURIComponent("/studio")}`
+      );
+      return;
+    }
+
+    setUserId(user.id);
+    const result = await loadCreatorListing(supabase, user.id);
+    if (result.error) {
+      setError(
+        result.error.includes("column") || result.error.includes("schema")
+          ? `${result.error} — run migrations 00003–00005 in the Supabase SQL Editor.`
+          : result.error
+      );
+    }
+    setDraft(result.draft);
+    setListingId(result.listingId);
+    setLoading(false);
     setMounted(true);
-  }, []);
+  }, [router]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const creator = useMemo(() => draftToCreator(draft), [draft]);
 
-  function update(partial: Partial<StudioDraft>) {
-    setDraft((d) => {
-      const next = { ...d, ...partial };
-      return saveStudioDraft(next);
-    });
+  function updateLocal(partial: Partial<StudioDraft>) {
+    setDraft((d) => ({ ...d, ...partial, updated_at: new Date().toISOString() }));
+    setStatusMsg(null);
   }
 
   function toggleMode(mode: ServiceMode) {
@@ -58,7 +111,7 @@ export default function StudioPage() {
         ? d.service_modes.filter((m) => m !== mode)
         : [...d.service_modes, mode];
       if (service_modes.length === 0) service_modes = ["shoot"];
-      return saveStudioDraft({ ...d, service_modes });
+      return { ...d, service_modes, updated_at: new Date().toISOString() };
     });
   }
 
@@ -67,10 +120,11 @@ export default function StudioPage() {
       const sub_regions = d.sub_regions.includes(loc)
         ? d.sub_regions.filter((r) => r !== loc)
         : [...d.sub_regions, loc];
-      return saveStudioDraft({
+      return {
         ...d,
         sub_regions: sub_regions.length ? sub_regions : [loc],
-      });
+        updated_at: new Date().toISOString(),
+      };
     });
   }
 
@@ -79,10 +133,34 @@ export default function StudioPage() {
       const categories = d.categories.includes(cat)
         ? d.categories.filter((c) => c !== cat)
         : [...d.categories, cat];
-      return saveStudioDraft({
+      const nextCats = categories.length ? categories : [cat];
+      const category_prices = syncCategoryPrices(
+        nextCats,
+        d.category_prices || {},
+        "shoot"
+      );
+      return {
         ...d,
-        categories: categories.length ? categories : [cat],
-      });
+        categories: nextCats,
+        category_prices,
+        starting_price: minCategoryPrice(category_prices),
+        updated_at: new Date().toISOString(),
+      };
+    });
+  }
+
+  function setCategoryPrice(cat: string, value: number) {
+    setDraft((d) => {
+      const category_prices = {
+        ...d.category_prices,
+        [cat]: value,
+      };
+      return {
+        ...d,
+        category_prices,
+        starting_price: minCategoryPrice(category_prices),
+        updated_at: new Date().toISOString(),
+      };
     });
   }
 
@@ -98,25 +176,61 @@ export default function StudioPage() {
       title: workRole === "edit" ? "Edit sample" : "Shoot sample",
       category: draft.categories[0],
     };
-    update({ works: [...draft.works, item] });
+    updateLocal({ works: [...draft.works, item] });
   }
 
   function removeWork(id: string) {
-    update({ works: draft.works.filter((w) => w.id !== id) });
+    updateLocal({ works: draft.works.filter((w) => w.id !== id) });
   }
 
   function toggleFeatured(id: string) {
-    update({
+    updateLocal({
       works: draft.works.map((w) =>
         w.id === id ? { ...w, is_featured: !w.is_featured } : w
       ),
     });
   }
 
-  if (!mounted) {
+  async function persist(opts?: { submitForReview?: boolean }) {
+    if (!userId) return;
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setError("Supabase is not configured.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setStatusMsg(null);
+
+    const result = await saveCreatorListing(supabase, userId, draft, opts);
+    setSaving(false);
+
+    if (!result.ok) {
+      setError(
+        result.error?.includes("column")
+          ? `${result.error} — run migration 00003 in Supabase SQL Editor.`
+          : result.error || "Save failed"
+      );
+      return;
+    }
+
+    if (result.draft) setDraft(result.draft);
+    if (result.listingId) setListingId(result.listingId);
+    setStatusMsg(
+      opts?.submitForReview
+        ? result.draft?.listing_status === "published"
+          ? "Listing saved and published. Share your profile link below."
+          : "Saved as draft — finish required quality checks to publish."
+        : "Listing saved to Supabase."
+    );
+  }
+
+  if (!mounted || loading) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-16 text-sm text-muted-foreground">
-        Loading studio…
+      <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-16 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading your listing…
       </div>
     );
   }
@@ -127,15 +241,14 @@ export default function StudioPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
-              Creator studio · local demo
+              Creator studio · Supabase
             </p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Build your listing
+              Your listing
             </h1>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Draft a profile with portfolio pieces and external links. Quality
-              checks mirror real publish rules. Saved in this browser only —
-              not Supabase yet.
+              Saves to your Supabase account. Portfolio works are stored as image
+              URLs for now (file upload later).
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -145,6 +258,20 @@ export default function StudioPage() {
             </Button>
           </div>
         </div>
+
+        {error && (
+          <p
+            className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+        {statusMsg && (
+          <p className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+            {statusMsg}
+          </p>
+        )}
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
@@ -157,7 +284,7 @@ export default function StudioPage() {
                   <label className="text-xs text-muted-foreground">Name</label>
                   <Input
                     value={draft.full_name}
-                    onChange={(e) => update({ full_name: e.target.value })}
+                    onChange={(e) => updateLocal({ full_name: e.target.value })}
                     placeholder="Your name / studio"
                     className="bg-background/50"
                   />
@@ -166,7 +293,7 @@ export default function StudioPage() {
                   <label className="text-xs text-muted-foreground">Tagline</label>
                   <Input
                     value={draft.tagline}
-                    onChange={(e) => update({ tagline: e.target.value })}
+                    onChange={(e) => updateLocal({ tagline: e.target.value })}
                     placeholder="e.g. Wedding films · Bandra"
                     className="bg-background/50"
                   />
@@ -176,31 +303,39 @@ export default function StudioPage() {
                   <textarea
                     rows={3}
                     value={draft.bio}
-                    onChange={(e) => update({ bio: e.target.value })}
-                    placeholder="Tell clients what you shoot/edit (40+ chars for publish)"
+                    onChange={(e) => updateLocal({ bio: e.target.value })}
+                    placeholder="Tell clients what you shoot/edit (40+ chars to publish)"
                     className="flex w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">
-                    Avatar image URL
-                  </label>
-                  <Input
-                    value={draft.avatar_url}
-                    onChange={(e) => update({ avatar_url: e.target.value })}
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">
-                    Cover image URL
-                  </label>
-                  <Input
-                    value={draft.cover_url}
-                    onChange={(e) => update({ cover_url: e.target.value })}
-                    className="bg-background/50"
-                  />
-                </div>
+                {userId ? (
+                  <>
+                    <div className="sm:col-span-1">
+                      <ImageUploadField
+                        label="Profile photo (avatar)"
+                        kind="avatar"
+                        userId={userId}
+                        value={draft.avatar_url}
+                        onChange={(url) => updateLocal({ avatar_url: url })}
+                        aspectClass="aspect-square"
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <ImageUploadField
+                        label="Cover image"
+                        kind="cover"
+                        userId={userId}
+                        value={draft.cover_url}
+                        onChange={(url) => updateLocal({ cover_url: url })}
+                        aspectClass="aspect-[16/10]"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
+                    Sign in to upload photos.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -272,11 +407,71 @@ export default function StudioPage() {
             <Card className="border-border bg-card/80">
               <CardHeader>
                 <CardTitle className="text-base">
-                  Portfolio on ROLLR
+                  Package prices by category
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Min 3 pieces required. Featured pieces power directory cards.
-                  Paste image URLs (demo — no file upload without Supabase).
+                  Set a <strong className="text-foreground">starting package</strong>{" "}
+                  for each category you offer — not hourly. Clients see “From ₹…”.
+                  Guides are soft Mumbai ballparks; set what you actually charge.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {draft.categories.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Select categories above first.
+                  </p>
+                )}
+                {draft.categories.map((cat) => {
+                  const guide = getPriceGuide(cat, "shoot");
+                  return (
+                    <div
+                      key={cat}
+                      className="rounded-lg border border-border bg-background/40 p-3"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium">{cat}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {guide.unit}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">₹</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={500}
+                            value={draft.category_prices[cat] ?? guide.suggested}
+                            onChange={(e) =>
+                              setCategoryPrice(cat, Number(e.target.value) || 0)
+                            }
+                            className="h-9 w-32 bg-background/50 tabular-nums"
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                        {guide.hint}
+                      </p>
+                    </div>
+                  );
+                })}
+                {draft.categories.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Directory shows{" "}
+                    <span className="font-medium text-foreground">
+                      {formatFromPrice(minCategoryPrice(draft.category_prices))}
+                    </span>{" "}
+                    (your lowest package floor).
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card/80">
+              <CardHeader>
+                <CardTitle className="text-base">Portfolio on ROLLR</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Min 3 pieces to publish. Image URLs for now.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -318,7 +513,7 @@ export default function StudioPage() {
                 <ul className="space-y-2">
                   {draft.works.length === 0 && (
                     <li className="text-sm text-muted-foreground">
-                      No pieces yet — add at least 3 to pass review.
+                      No pieces yet — add at least 3 to publish.
                     </li>
                   )}
                   {draft.works.map((w) => (
@@ -362,10 +557,6 @@ export default function StudioPage() {
             <Card className="border-border bg-card/80">
               <CardHeader>
                 <CardTitle className="text-base">Also online (links)</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Portfolio site, Instagram, showreel — optional but improves
-                  trust. Never enough alone to publish.
-                </p>
               </CardHeader>
               <CardContent className="grid gap-3">
                 <div className="space-y-1.5">
@@ -375,7 +566,7 @@ export default function StudioPage() {
                   <Input
                     value={draft.links.portfolio_url ?? ""}
                     onChange={(e) =>
-                      update({
+                      updateLocal({
                         links: { ...draft.links, portfolio_url: e.target.value },
                       })
                     }
@@ -390,7 +581,7 @@ export default function StudioPage() {
                   <Input
                     value={draft.links.instagram_url ?? ""}
                     onChange={(e) =>
-                      update({
+                      updateLocal({
                         links: { ...draft.links, instagram_url: e.target.value },
                       })
                     }
@@ -405,7 +596,7 @@ export default function StudioPage() {
                   <Input
                     value={draft.links.showreel_url ?? ""}
                     onChange={(e) =>
-                      update({
+                      updateLocal({
                         links: { ...draft.links, showreel_url: e.target.value },
                       })
                     }
@@ -423,40 +614,55 @@ export default function StudioPage() {
               score={creator.quality_score}
             />
 
+            {listingId && draft.listing_status === "published" && (
+              <ProfileShareCard
+                listingId={listingId}
+                creatorName={draft.full_name || "My ROLLR profile"}
+              />
+            )}
+
+            {userId && <ReferralPanel userId={userId} />}
+
             <Card className="border-border bg-card">
               <CardHeader>
                 <CardTitle className="text-base">Preview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-secondary">
-                  <Image
-                    src={creator.cover_url}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="400px"
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative h-12 w-12 overflow-hidden rounded-full">
+                  {draft.cover_url && (
                     <Image
-                      src={creator.avatar_url || ""}
+                      src={draft.cover_url}
                       alt=""
                       fill
                       className="object-cover"
-                      sizes="48px"
+                      sizes="400px"
                     />
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full bg-secondary">
+                    {draft.avatar_url && (
+                      <Image
+                        src={draft.avatar_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    )}
                   </div>
                   <div>
-                    <p className="font-semibold">{creator.full_name}</p>
+                    <p className="font-semibold">
+                      {draft.full_name || "Your name"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {creator.tagline}
+                      {draft.tagline || "Your tagline"}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   <Badge variant="secondary">{draft.works.length} works</Badge>
-                  {creator.links.portfolio_url && (
+                  {draft.links.portfolio_url && (
                     <Badge variant="outline">Has portfolio link</Badge>
                   )}
                 </div>
@@ -466,26 +672,33 @@ export default function StudioPage() {
             <div className="flex flex-col gap-2">
               <Button
                 className="w-full font-semibold"
-                onClick={() => setDraft(submitDraftForReview(draft))}
+                disabled={saving}
+                onClick={() => void persist()}
               >
-                Submit for review
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-4 w-4" />
+                    Save to Supabase
+                  </>
+                )}
               </Button>
-              <p className="text-center text-[11px] text-muted-foreground">
-                Demo only: sets status to Pending review if checks pass. Live
-                admin queue needs Supabase later.
-              </p>
-              {draft.listing_status === "pending_review" && (
-                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200">
-                  Submitted — in a real app a reviewer would approve before
-                  Discover.
-                </p>
-              )}
               <Button
                 variant="outline"
-                onClick={() => setDraft(saveStudioDraft(emptyStudioDraft()))}
+                className="w-full font-semibold"
+                disabled={saving}
+                onClick={() => void persist({ submitForReview: true })}
               >
-                Reset draft
+                Save &amp; publish
               </Button>
+              <p className="text-center text-[11px] text-muted-foreground">
+                Publish requires the quality checklist. Sets role to{" "}
+                <strong className="text-foreground">creator</strong> on save.
+              </p>
             </div>
           </div>
         </div>

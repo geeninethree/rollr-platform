@@ -1,3 +1,4 @@
+import { minCategoryPrice } from "@/lib/pricing";
 import type { BriefType, CreatorCardModel, ServiceMode } from "@/lib/types";
 
 export function formatPriceInr(price: number) {
@@ -98,16 +99,25 @@ export function creatorToClientWhatsAppUrl(input: {
 }
 
 export function shootPrice(creator: CreatorCardModel) {
-  return creator.starting_price;
+  const fromCats = minCategoryPrice(creator.category_prices);
+  return fromCats > 0 ? fromCats : creator.starting_price;
 }
 
 export function editPrice(creator: CreatorCardModel) {
+  const fromCats = minCategoryPrice(creator.category_prices);
+  if (fromCats > 0) return fromCats;
   return creator.edit_starting_price ?? creator.starting_price;
 }
 
+/** Lowest package floor across categories (or mode fallback). */
 export function displayPriceForMode(
   creator: CreatorCardModel,
   mode: "shoot" | "edit"
 ) {
   return mode === "edit" ? editPrice(creator) : shootPrice(creator);
+}
+
+export function priceLabelFrom(price: number) {
+  if (!price || price <= 0) return "Price on request";
+  return `From ${formatPriceInr(price)}`;
 }

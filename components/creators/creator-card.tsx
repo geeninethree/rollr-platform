@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   displayPriceForMode,
-  formatPriceInr,
   initials,
   isHybrid,
   isProCreator,
+  priceLabelFrom,
 } from "@/lib/format";
 import { coverForMode, featuredWorks, workCount } from "@/lib/portfolio";
 import type { CreatorCardModel, ServiceMode } from "@/lib/types";
@@ -152,12 +152,10 @@ export function CreatorCard({
       <CardContent className="relative z-[1] flex flex-1 flex-col gap-3 p-4 pointer-events-none">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-foreground">
-            From {formatPriceInr(price)}
-            {isEditSurface && (
-              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                edit
-              </span>
-            )}
+            {priceLabelFrom(price)}
+            <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+              pkg
+            </span>
           </p>
           <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Star className="h-3.5 w-3.5 fill-primary text-primary" />

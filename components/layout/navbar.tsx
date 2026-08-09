@@ -3,10 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { ChevronDown, Menu, X } from "lucide-react";
+import { UserMenu } from "@/components/auth/user-menu";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { countPending, INQUIRIES_CHANGED } from "@/lib/inquiries";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const publicLinks = [
@@ -34,6 +37,9 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const [creatorsOpen, setCreatorsOpen] = useState(false);
   const [pending, setPending] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [profileName, setProfileName] = useState<string>("");
+  const [profileRole, setProfileRole] = useState<string>("client");
   const creatorsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,6 +50,56 @@ export function Navbar() {
     return () => {
       window.removeEventListener(INQUIRIES_CHANGED, refresh);
       window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+
+    let cancelled = false;
+
+    async function loadUser(u: User | null) {
+      if (cancelled) return;
+      setUser(u);
+      if (!u) {
+        setProfileName("");
+        setProfileRole("client");
+        return;
+      }
+
+      setProfileName(
+        (u.user_metadata?.full_name as string) ||
+          u.email?.split("@")[0] ||
+          "User"
+      );
+      setProfileRole((u.user_metadata?.role as string) || "client");
+
+      const { data } = await supabase!
+        .from("profiles")
+        .select("full_name, role")
+        .eq("id", u.id)
+        .maybeSingle();
+
+      if (!cancelled && data) {
+        if (data.full_name) setProfileName(data.full_name);
+        if (data.role) setProfileRole(data.role);
+      }
+    }
+
+    supabase.auth.getUser().then(({ data }) => {
+      void loadUser(data.user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      void loadUser(session?.user ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -71,6 +127,8 @@ export function Navbar() {
     pathname.startsWith("/list") ||
     pathname.startsWith("/studio") ||
     pathname.startsWith("/inbox");
+  const hideAuthChrome =
+    pathname.startsWith("/login") || pathname.startsWith("/signup");
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
@@ -100,7 +158,6 @@ export function Navbar() {
               );
             })}
 
-            {/* Creators dropdown — Studio / Inbox / List out of primary chrome */}
             <div className="relative" ref={creatorsRef}>
               <button
                 type="button"
@@ -161,25 +218,49 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden flex-col items-end leading-none sm:flex">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Creators
-            </span>
-            <span className="text-xs font-semibold text-primary">₹299/mo</span>
-          </div>
-          <Button
-            asChild
-            size="sm"
-            className={cn(
-              "font-semibold shadow-sm shadow-primary/20 pressable",
-              onList && "ring-2 ring-primary/40"
-            )}
-          >
-            <Link href="/list">
-              <span className="hidden sm:inline">List — ₹299</span>
-              <span className="sm:hidden">₹299</span>
-            </Link>
-          </Button>
+          {!hideAuthChrome && (
+            <>
+              {user ? (
+                <UserMenu
+                  email={user.email || ""}
+                  fullName={profileName}
+                  role={profileRole}
+                />
+              ) : (
+                <>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="hidden sm:inline-flex"
+                  >
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="hidden font-medium sm:inline-flex"
+                  >
+                    <Link href="/signup">Sign up</Link>
+                  </Button>
+                </>
+              )}
+              <Button
+                asChild
+                size="sm"
+                className={cn(
+                  "font-semibold shadow-sm shadow-primary/20 pressable",
+                  onList && "ring-2 ring-primary/40"
+                )}
+              >
+                <Link href="/list">
+                  <span className="hidden sm:inline">List — ₹299</span>
+                  <span className="sm:hidden">₹299</span>
+                </Link>
+              </Button>
+            </>
+          )}
           <button
             type="button"
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-secondary pressable md:hidden"
@@ -235,6 +316,27 @@ export function Navbar() {
                 </Link>
               ))}
             </li>
+            {!user && (
+              <li className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-2">
+                <Link
+                  href="/login"
+                  className="rounded-md border border-border px-3 py-2.5 text-center text-sm font-medium"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-md bg-secondary px-3 py-2.5 text-center text-sm font-medium"
+                >
+                  Sign up
+                </Link>
+              </li>
+            )}
+            {user && (
+              <li className="mt-2 border-t border-border px-3 pt-2 text-sm text-muted-foreground">
+                Signed in as {profileName}
+              </li>
+            )}
             <li className="mt-2">
               <Link
                 href="/list"

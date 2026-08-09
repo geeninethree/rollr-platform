@@ -1,12 +1,12 @@
 /**
- * Local creator studio draft (browser only — no Supabase).
+ * Studio draft shape + helpers (used with Supabase creator listings).
  */
 
 import {
   computeQualityScore,
-  meetsPublishRequirements,
   normalizeExternalUrl,
 } from "@/lib/portfolio";
+import { minCategoryPrice, syncCategoryPrices } from "@/lib/pricing";
 import type {
   CreatorCardModel,
   ExternalLinks,
@@ -15,17 +15,17 @@ import type {
   ServiceMode,
 } from "@/lib/types";
 
-const STORAGE_KEY = "rollr_studio_draft_v1";
-export const STUDIO_CHANGED = "rollr:studio-changed";
-
 export type StudioDraft = {
   full_name: string;
   tagline: string;
   bio: string;
   avatar_url: string;
   cover_url: string;
+  /** @deprecated use category_prices — kept as min cache */
   starting_price: number;
   edit_starting_price: number;
+  /** Category → package starting price (INR) */
+  category_prices: Record<string, number>;
   sub_regions: string[];
   categories: string[];
   service_modes: ServiceMode[];
@@ -41,16 +41,19 @@ const defaultCover =
   "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80";
 
 export function emptyStudioDraft(): StudioDraft {
+  const categories = ["Wedding"];
+  const category_prices = syncCategoryPrices(categories, {}, "shoot");
   return {
     full_name: "",
     tagline: "",
     bio: "",
     avatar_url: defaultAvatar,
     cover_url: defaultCover,
-    starting_price: 10000,
+    starting_price: minCategoryPrice(category_prices),
     edit_starting_price: 5000,
+    category_prices,
     sub_regions: ["Bandra"],
-    categories: ["Wedding"],
+    categories,
     service_modes: ["shoot"],
     links: {
       portfolio_url: "",
@@ -63,42 +66,19 @@ export function emptyStudioDraft(): StudioDraft {
   };
 }
 
-function canUseStorage() {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
-}
-
-export function loadStudioDraft(): StudioDraft {
-  if (!canUseStorage()) return emptyStudioDraft();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyStudioDraft();
-    return { ...emptyStudioDraft(), ...JSON.parse(raw) };
-  } catch {
-    return emptyStudioDraft();
-  }
-}
-
-export function saveStudioDraft(draft: StudioDraft) {
-  const next = { ...draft, updated_at: new Date().toISOString() };
-  if (canUseStorage()) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent(STUDIO_CHANGED));
-  }
-  return next;
-}
-
-export function clearStudioDraft() {
-  if (!canUseStorage()) return;
-  localStorage.removeItem(STORAGE_KEY);
-  window.dispatchEvent(new CustomEvent(STUDIO_CHANGED));
-}
-
 export function draftToCreator(draft: StudioDraft): CreatorCardModel {
   const links: ExternalLinks = {
     portfolio_url: normalizeExternalUrl(draft.links.portfolio_url ?? "") || null,
     instagram_url: normalizeExternalUrl(draft.links.instagram_url ?? "") || null,
     showreel_url: normalizeExternalUrl(draft.links.showreel_url ?? "") || null,
   };
+
+  const category_prices =
+    Object.keys(draft.category_prices || {}).length > 0
+      ? draft.category_prices
+      : syncCategoryPrices(draft.categories, {}, "shoot");
+
+  const fromPrice = minCategoryPrice(category_prices) || draft.starting_price;
 
   const base: CreatorCardModel = {
     id: "studio-draft",
@@ -107,7 +87,7 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     email: "you@studio.local",
     avatar_url: draft.avatar_url || defaultAvatar,
     bio: draft.bio || null,
-    starting_price: draft.starting_price,
+    starting_price: fromPrice,
     cities: ["Mumbai"],
     sub_regions: draft.sub_regions,
     categories: draft.categories,
@@ -119,7 +99,7 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     tagline: draft.tagline || "Your tagline",
     rating: 0,
     review_count: 0,
-    response_label: "New on ROLLR",
+    response_label: "Usually replies within a day",
     service_modes: draft.service_modes,
     edit_starting_price: draft.edit_starting_price,
     edit_portfolio: draft.works
@@ -129,14 +109,7 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     links,
     listing_status: draft.listing_status,
     quality_score: 0,
+    category_prices,
   };
   return { ...base, quality_score: computeQualityScore(base) };
-}
-
-export function submitDraftForReview(draft: StudioDraft): StudioDraft {
-  const creator = draftToCreator(draft);
-  if (!meetsPublishRequirements(creator)) {
-    return saveStudioDraft({ ...draft, listing_status: "draft" });
-  }
-  return saveStudioDraft({ ...draft, listing_status: "pending_review" });
 }

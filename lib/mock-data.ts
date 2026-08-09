@@ -4,35 +4,161 @@ import {
   itemsFromUrls,
   mergeWorks,
 } from "@/lib/portfolio";
+import { syncCategoryPrices } from "@/lib/pricing";
 
 const img = (id: string, w = 1200) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 type CreatorSeed = Omit<
   CreatorCardModel,
-  "works" | "links" | "listing_status" | "quality_score"
+  "works" | "links" | "listing_status" | "quality_score" | "category_prices"
 >;
 
+/** Mumbai & MMR service areas (extensive — northern / western / Thane / Navi) */
 export const LOCATIONS = [
-  "Bandra",
-  "Andheri",
-  "South Mumbai",
-  "Navi Mumbai",
-  "Thane",
-  "Powai",
-  "Juhu",
+  // South Mumbai & island city
+  "Colaba",
+  "Fort / CST",
+  "Marine Drive",
+  "Churchgate",
+  "Nariman Point",
+  "Cuffe Parade",
+  "Malabar Hill",
+  "Breach Candy",
+  "Pedder Road",
+  "Tardeo / Haji Ali",
+  "Grant Road",
+  "Girgaon",
+  "Byculla",
   "Worli",
+  "Prabhadevi",
+  "Dadar",
+  "Parel / Lower Parel",
+  "Sewri",
+  "Mahim",
+  "Matunga",
+  "Wadala",
+  "Sion",
+  "King's Circle",
+  "South Mumbai",
+  // Western suburbs (Bandra → Dahisar)
+  "Bandra East",
+  "Bandra West",
+  "Bandra",
+  "Khar",
+  "Santacruz East",
+  "Santacruz West",
+  "Vile Parle East",
+  "Vile Parle West",
+  "Juhu",
+  "Andheri East",
+  "Andheri West",
+  "Versova",
+  "Lokhandwala",
+  "Oshiwara",
+  "DN Nagar",
+  "Four Bungalows",
+  "Jogeshwari East",
+  "Jogeshwari West",
+  "Goregaon East",
+  "Goregaon West",
+  "Malad East",
+  "Malad West",
+  "Kandivali East",
+  "Kandivali West",
+  "Borivali East",
+  "Borivali West",
+  "Dahisar East",
+  "Dahisar West",
+  // Northern suburbs & extended west
+  "Northern suburbs",
+  "Mira Road",
+  "Bhayandar East",
+  "Bhayandar West",
+  "Naigaon",
+  "Vasai East",
+  "Vasai West",
+  "Nallasopara",
+  "Virar",
+  "Vasai / Virar",
+  "Boisar",
+  "Palghar",
+  // Central / harbour line & eastern
+  "Kurla",
+  "Chembur",
+  "Tilak Nagar",
+  "Ghatkopar East",
+  "Ghatkopar West",
+  "Vikhroli",
+  "Kanjurmarg",
+  "Bhandup",
+  "Nahur",
+  "Mulund East",
+  "Mulund West",
+  "Powai",
+  "Chandivali",
   "BKC",
+  "Kalina",
+  "Saki Naka",
+  "Marol",
+  "Asalpha",
+  // Thane & beyond
+  "Thane West",
+  "Thane East",
+  "Ghodbunder Road",
+  "Hiranandani Estate",
+  "Wagle Estate",
+  "Kopri",
+  "Kalwa",
+  "Mumbra",
+  "Diva",
+  "Dombivli East",
+  "Dombivli West",
+  "Kalyan East",
+  "Kalyan West",
+  "Ambernath",
+  "Badlapur",
+  "Ulhasnagar",
+  "Shahad",
+  "Titwala",
+  // Navi Mumbai
+  "Vashi",
+  "Sanpada",
+  "Nerul",
+  "Seawoods",
+  "Belapur",
+  "Kharghar",
+  "Kamothe",
+  "Kalamboli",
+  "Panvel",
+  "Airoli",
+  "Ghansoli",
+  "Kopar Khairane",
+  "Turbhe",
+  "Juinagar",
+  "CBD Belapur",
+  "Navi Mumbai",
+  // Destinations often covered from Mumbai
+  "Alibaug",
+  "Lonavala / Khandala",
+  "Karjat",
+  "Igatpuri",
+  // Other
+  "Remote / Online",
+  "All Mumbai / Travel OK",
 ] as const;
 
 export const SHOOT_CATEGORIES = [
   "Wedding",
+  "Personal Events",
   "Nightclub",
   "Corporate",
   "Fashion",
   "Real Estate",
   "Concert",
   "Product",
+  "Podcasts",
+  "Custom",
 ] as const;
 
 export const EDIT_SPECIALTIES = [
@@ -411,6 +537,13 @@ function withPortfolio(c: CreatorSeed): CreatorCardModel {
 
   const works = mergeWorks(shoot, edit, extraShoot);
   const slug = c.full_name.toLowerCase().replace(/[^a-z]+/g, "");
+  const category_prices = syncCategoryPrices(
+    c.categories,
+    Object.fromEntries(
+      c.categories.map((cat) => [cat, c.starting_price || 10000])
+    ),
+    "shoot"
+  );
   const base: CreatorCardModel = {
     ...c,
     works,
@@ -421,6 +554,7 @@ function withPortfolio(c: CreatorSeed): CreatorCardModel {
     },
     listing_status: "published",
     quality_score: 0,
+    category_prices,
   };
   return { ...base, quality_score: computeQualityScore(base) };
 }

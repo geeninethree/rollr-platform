@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CreatorProfile } from "@/components/creators/creator-profile";
-import { getCreatorById, MOCK_CREATORS } from "@/lib/mock-data";
+import { fetchCreatorById } from "@/lib/directory";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { ServiceMode } from "@/lib/types";
 
 type PageProps = {
@@ -8,12 +9,12 @@ type PageProps = {
   searchParams?: { tab?: string };
 };
 
-export function generateStaticParams() {
-  return MOCK_CREATORS.map((c) => ({ id: c.id }));
-}
+export const dynamic = "force-dynamic";
 
-export function generateMetadata({ params }: PageProps) {
-  const creator = getCreatorById(params.id);
+export async function generateMetadata({ params }: PageProps) {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) return { title: "Creator — ROLLR" };
+  const { creator } = await fetchCreatorById(supabase, params.id);
   if (!creator) return { title: "Creator — ROLLR" };
   return {
     title: `${creator.full_name} — ROLLR`,
@@ -21,12 +22,20 @@ export function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default function CreatorProfilePage({
+export default async function CreatorProfilePage({
   params,
   searchParams,
 }: PageProps) {
-  const creator = getCreatorById(params.id);
+  const supabase = getSupabaseServerClient();
+  if (!supabase) notFound();
+
+  const { creator } = await fetchCreatorById(supabase, params.id);
   if (!creator) notFound();
+
+  // Only show published (or allow draft owner later)
+  if (creator.listing_status !== "published") {
+    notFound();
+  }
 
   const tabParam = searchParams?.tab;
   const initialTab: ServiceMode | undefined =
