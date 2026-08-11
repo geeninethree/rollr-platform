@@ -186,8 +186,13 @@ export function SendBriefDialog({
       setError(result.error || "Could not send brief.");
       return;
     }
-    if (result.error && result.source === "local") {
-      console.warn(result.error);
+    // Local-only fallback: still allow success but warn clearly
+    if (result.source === "local") {
+      setError(
+        result.error
+          ? `Brief saved only on this browser (${result.error}). Creator will not see it on other devices until Supabase inquiries work.`
+          : "Brief saved only on this browser — creator will not see it elsewhere."
+      );
     }
     setSubmittedId(result.inquiry.id);
 
@@ -250,7 +255,7 @@ export function SendBriefDialog({
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {submittedId
-                ? "Their number stays private until they accept. They'll message you on WhatsApp after accepting."
+                ? "Their number stays private until they accept. They'll WhatsApp you after accepting. If email is configured, they also get a notification."
                 : "Creator numbers stay private. They message you on WhatsApp only after accepting this brief."}
             </p>
           </div>
@@ -282,11 +287,14 @@ export function SendBriefDialog({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild className="font-semibold">
-                <a href="/inbox">Open creator inbox (demo)</a>
-              </Button>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                className="font-semibold"
+                onClick={() => onOpenChange(false)}
+              >
                 Done
+              </Button>
+              <Button asChild variant="outline">
+                <a href="/">Browse more creators</a>
               </Button>
             </div>
           </div>

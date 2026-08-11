@@ -357,6 +357,49 @@ export default function ListProfilePage() {
         </ol>
       </section>
 
+      {/* Recruiter multi-job — job board product, not creator listing */}
+      <section
+        id="recruiter"
+        className="border-t border-border/60 scroll-mt-20 bg-primary/5"
+      >
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-xl space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
+                Hiring side
+              </p>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Recruiter · multi-job board · ₹399/mo
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Creators list here for ₹299. Agencies and frequent hires post
+                open jobs on the{" "}
+                <Link
+                  href="/job-board"
+                  className="font-medium text-primary hover:underline"
+                >
+                  job board
+                </Link>
+                : free = 1 open job; Recruiter unlocks multiple. Billing not
+                live — join the waitlist from the board.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild className="font-semibold">
+                <Link href="/job-board#recruiter">
+                  Join recruiter waitlist
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/signup?role=recruiter&next=/job-board">
+                  Sign up as recruiter
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Waitlist form */}
       <section id="join" className="border-t border-border/60 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -403,8 +446,8 @@ export default function ListProfilePage() {
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   {submitted
-                    ? "We received your details and will follow up."
-                    : "Tell us who you are — takes under a minute."}
+                    ? "Saved for the ROLLR team. We review in admin — no auto-email to you yet."
+                    : "Tell us who you are — takes under a minute. No charge today."}
                 </p>
               </CardHeader>
               <CardContent>
@@ -416,8 +459,9 @@ export default function ListProfilePage() {
                     </p>
                     <p className="max-w-xs text-sm text-muted-foreground">
                       Saved for review
-                      {email ? ` · ${email}` : ""}. You can also build your
-                      portfolio now while you wait.
+                      {email ? ` · ${email}` : ""}. We don&apos;t send an
+                      auto-confirm email yet — check admin or build your
+                      portfolio while you wait.
                     </p>
                     <Button asChild variant="outline" className="mt-2">
                       <Link href="/signup?role=creator&next=/studio">

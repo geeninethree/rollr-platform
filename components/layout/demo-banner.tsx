@@ -22,8 +22,8 @@ export function DemoBanner() {
   if (!visible) return null;
 
   return (
-    <div className="border-b border-white/[0.06] bg-black/80">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-1.5 text-[11px] sm:px-6 sm:text-xs">
+    <div className="border-b border-white/[0.04] bg-black">
+      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-1 text-[10px] sm:px-6 sm:text-[11px]">
         <p className="min-w-0 flex-1 text-muted-foreground">
           <span className="font-medium text-foreground/90">Alpha</span>
           <span className="mx-1.5 text-border">·</span>

@@ -214,11 +214,46 @@ export default function SupabaseSetupPage() {
               — admin RLS, listing approve, reviews, portfolio uploads
             </li>
             <li>
+              <code className="text-primary">
+                supabase/migrations/00009_jobs_and_recruiter.sql
+              </code>{" "}
+              — job board, pitches, recruiter role, 1-open-job limit
+            </li>
+            <li>
+              <code className="text-primary">
+                supabase/migrations/00010_waitlist_recruiter.sql
+              </code>{" "}
+              — waitlist accepts recruiter / hire interest
+            </li>
+            <li>
+              <code className="text-primary">
+                supabase/migrations/00011_admin_profile_and_notify.sql
+              </code>{" "}
+              — admin can activate recruiter multi-job on other profiles
+            </li>
+            <li>
+              <code className="text-primary">
+                supabase/migrations/00012_jobs_public_privacy.sql
+              </code>{" "}
+              — public board hides poster WhatsApp (view + tighter RLS)
+            </li>
+            <li>
               <code className="text-primary">.env.local</code> — keys +{" "}
               <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code> for{" "}
               <Link href="/admin" className="text-primary underline">
                 /admin
               </Link>
+              . Also run:{" "}
+              <code className="text-primary">
+                update profiles set is_admin = true where email = &apos;you@…&apos;
+              </code>
+            </li>
+            <li>
+              Optional email:{" "}
+              <code className="text-primary">RESEND_API_KEY</code> +{" "}
+              <code className="text-primary">EMAIL_FROM</code> — briefs →
+              creators, waitlist → admin inbox. Without keys, both are silent
+              no-ops.
             </li>
           </ul>
         </div>

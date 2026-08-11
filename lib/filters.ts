@@ -2,6 +2,7 @@ import { displayPriceForMode } from "@/lib/format";
 import type { CreatorCardModel, SearchFilters, ServiceMode } from "@/lib/types";
 
 export const EMPTY_FILTERS: SearchFilters = {
+  query: "",
   locations: [],
   eventDate: "",
   categories: [],
@@ -13,6 +14,7 @@ export const EMPTY_FILTERS: SearchFilters = {
 
 export function hasActiveFilters(filters: SearchFilters, mode: ServiceMode) {
   return (
+    Boolean(filters.query.trim()) ||
     filters.locations.length > 0 ||
     filters.categories.length > 0 ||
     filters.under15k ||
@@ -27,8 +29,9 @@ export function filterCreators(
   filters: SearchFilters,
   mode: ServiceMode
 ) {
+  const q = filters.query.trim().toLowerCase();
+
   const filtered = creators.filter((creator) => {
-    // Directory only shows published listings (vetting gate)
     if (creator.listing_status && creator.listing_status !== "published") {
       return false;
     }
@@ -41,10 +44,30 @@ export function filterCreators(
       if (!creator.service_modes.includes("shoot")) return false;
     }
 
+    if (q) {
+      const hay = [
+        creator.full_name,
+        creator.tagline,
+        creator.bio,
+        creator.edit_tagline,
+        creator.edit_bio,
+        ...creator.sub_regions,
+        ...creator.categories,
+        ...(creator.edit_specialties ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+
     if (filters.locations.length > 0) {
       const hit = filters.locations.some((loc) =>
         creator.sub_regions.some(
-          (r) => r.toLowerCase() === loc.toLowerCase()
+          (r) =>
+            r.toLowerCase() === loc.toLowerCase() ||
+            r.toLowerCase().includes(loc.toLowerCase()) ||
+            loc.toLowerCase().includes(r.toLowerCase())
         )
       );
       if (!hit) return false;
@@ -53,10 +76,7 @@ export function filterCreators(
     if (filters.categories.length > 0) {
       const pool =
         mode === "edit"
-          ? [
-              ...creator.categories,
-              ...(creator.edit_specialties ?? []),
-            ]
+          ? [...creator.categories, ...(creator.edit_specialties ?? [])]
           : creator.categories;
       const hit = filters.categories.some((cat) => pool.includes(cat));
       if (!hit) return false;
@@ -70,7 +90,6 @@ export function filterCreators(
     return true;
   });
 
-  // Prefer reviewed creators, then higher rating, then name.
   return filtered.sort((a, b) => {
     if (b.review_count !== a.review_count) return b.review_count - a.review_count;
     if (b.rating !== a.rating) return b.rating - a.rating;

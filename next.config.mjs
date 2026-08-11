@@ -14,9 +14,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "capqimmecknmnlhtsvtj.supabase.co",
       },
+      // Any Supabase project storage host
       {
         protocol: "https",
-        hostname: "*.supabase.co",
+        hostname: "**.supabase.co",
       },
     ],
   },

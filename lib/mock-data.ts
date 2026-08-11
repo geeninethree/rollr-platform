@@ -15,30 +15,140 @@ type CreatorSeed = Omit<
 >;
 
 /**
- * Coarse Mumbai / MMR service areas for filters & portfolio.
- * One name per suburb cluster — no East/West duplicates.
+ * Mumbai / MMR areas — individual suburbs for search + portfolio.
+ * (No East/West pairs; northern line explicit.)
  */
 export const LOCATIONS = [
+  // South & island
   "South Mumbai",
+  "Colaba",
+  "Fort / CST",
   "Worli / Lower Parel",
   "Dadar / Matunga",
+  // Western line
   "Bandra / Khar",
   "Santacruz / Vile Parle",
   "Juhu",
   "Andheri",
-  "Western suburbs (Goregaon–Dahisar)",
+  "Goregaon",
+  "Malad",
+  "Kandivali",
+  "Borivali",
+  "Dahisar",
+  // Northern / extended west
+  "Mira Road",
+  "Bhayandar",
   "Mira–Bhayandar",
+  "Vasai",
+  "Virar",
   "Vasai–Virar",
+  // Central / east
   "Kurla / Chembur",
+  "Ghatkopar",
+  "Mulund",
   "Ghatkopar / Mulund",
   "Powai / BKC",
+  "Powai",
+  "BKC",
+  // Thane belt
   "Thane",
+  "Kalyan",
+  "Dombivli",
   "Kalyan–Dombivli",
+  // Navi
   "Navi Mumbai",
+  "Vashi",
+  "Nerul",
+  "Kharghar",
+  "Panvel",
+  // Destinations
   "Alibaug / Lonavala",
   "Remote / Online",
   "All Mumbai / Travel OK",
 ] as const;
+
+/** Typeahead aliases → canonical location label */
+export const LOCATION_ALIASES: Record<string, string> = {
+  kandivali: "Kandivali",
+  kandivli: "Kandivali",
+  borivali: "Borivali",
+  borivli: "Borivali",
+  goregaon: "Goregaon",
+  malad: "Malad",
+  dahisar: "Dahisar",
+  mira: "Mira Road",
+  "mira road": "Mira Road",
+  bhayandar: "Bhayandar",
+  bhayander: "Bhayandar",
+  andheri: "Andheri",
+  juhu: "Juhu",
+  bandra: "Bandra / Khar",
+  khar: "Bandra / Khar",
+  santacruz: "Santacruz / Vile Parle",
+  "vile parle": "Santacruz / Vile Parle",
+  parle: "Santacruz / Vile Parle",
+  ghatkopar: "Ghatkopar",
+  mulund: "Mulund",
+  powai: "Powai",
+  bkc: "BKC",
+  thane: "Thane",
+  kalyan: "Kalyan",
+  dombivli: "Dombivli",
+  dombivali: "Dombivli",
+  vashi: "Vashi",
+  nerul: "Nerul",
+  kharghar: "Kharghar",
+  panvel: "Panvel",
+  navi: "Navi Mumbai",
+  "navi mumbai": "Navi Mumbai",
+  vasai: "Vasai",
+  virar: "Virar",
+  worli: "Worli / Lower Parel",
+  "lower parel": "Worli / Lower Parel",
+  dadar: "Dadar / Matunga",
+  matunga: "Dadar / Matunga",
+  chembur: "Kurla / Chembur",
+  kurla: "Kurla / Chembur",
+  colaba: "Colaba",
+  alibaug: "Alibaug / Lonavala",
+  lonavala: "Alibaug / Lonavala",
+};
+
+/** Resolve free-text to best location labels for suggestions */
+export function matchLocations(query: string, limit = 8): string[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [...LOCATIONS].slice(0, 8);
+
+  const scored = new Map<string, number>();
+
+  const aliasHit = LOCATION_ALIASES[q];
+  if (aliasHit) scored.set(aliasHit, 100);
+
+  for (const [alias, canon] of Object.entries(LOCATION_ALIASES)) {
+    if (alias.startsWith(q) || alias.includes(q)) {
+      scored.set(canon, Math.max(scored.get(canon) ?? 0, 80 - alias.length));
+    }
+  }
+
+  for (const loc of LOCATIONS) {
+    const l = loc.toLowerCase();
+    if (l === q) scored.set(loc, 100);
+    else if (l.startsWith(q)) scored.set(loc, Math.max(scored.get(loc) ?? 0, 70));
+    else if (l.includes(q)) scored.set(loc, Math.max(scored.get(loc) ?? 0, 50));
+    else {
+      // token match: "kandivali" in "Western..." no; "goregaon" in label
+      const tokens = l.split(/[\s/–—,-]+/);
+      if (tokens.some((t) => t.startsWith(q) || q.startsWith(t))) {
+        scored.set(loc, Math.max(scored.get(loc) ?? 0, 60));
+      }
+    }
+  }
+
+  return Array.from(scored.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([label]) => label)
+    .slice(0, limit);
+}
 
 export const SHOOT_CATEGORIES = [
   "Wedding",

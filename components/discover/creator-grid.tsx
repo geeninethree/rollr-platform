@@ -39,15 +39,16 @@ export function CreatorGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
       {creators.map((creator, i) => (
-        <CreatorCard
-          key={creator.id}
-          creator={creator}
-          surface={surface}
-          eventDate={eventDate}
-          index={i}
-        />
+        <div key={creator.id} className="min-w-0">
+          <CreatorCard
+            creator={creator}
+            surface={surface}
+            eventDate={eventDate}
+            index={i}
+          />
+        </div>
       ))}
     </div>
   );

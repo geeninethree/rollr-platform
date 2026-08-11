@@ -117,8 +117,18 @@ export function CreatorInbox() {
       "accepted"
     );
     const updated = result.inquiry;
-    if (!updated) return;
+    if (!updated) {
+      setError(result.error || "Could not accept brief.");
+      return;
+    }
+    if (result.error) {
+      setError(`Accepted locally; sync note: ${result.error}`);
+    }
     await refresh();
+    if (!updated.client_whatsapp?.trim()) {
+      setError("Accepted, but client WhatsApp is missing on this brief.");
+      return;
+    }
     const url = creatorToClientWhatsAppUrl({
       clientWhatsapp: updated.client_whatsapp,
       clientName: updated.client_name,
@@ -132,7 +142,11 @@ export function CreatorInbox() {
 
   async function decline(id: string) {
     const supabase = getSupabaseBrowserClient();
-    await setInquiryStatusRemote(supabase, id, "declined");
+    const result = await setInquiryStatusRemote(supabase, id, "declined");
+    if (result.error && !result.inquiry) {
+      setError(result.error);
+      return;
+    }
     await refresh();
   }
 

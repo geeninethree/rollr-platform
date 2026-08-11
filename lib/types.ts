@@ -1,4 +1,4 @@
-export type UserRole = "creator" | "client";
+export type UserRole = "creator" | "client" | "recruiter";
 export type SubscriptionStatus = "inactive" | "active" | "past_due";
 
 /** What a creator offers on ROLLR */
@@ -120,6 +120,8 @@ export type JobBrief = {
 };
 
 export type SearchFilters = {
+  /** Free-text: name, tagline, area, category */
+  query: string;
   locations: string[];
   eventDate: string;
   categories: string[];

@@ -68,23 +68,36 @@ export function LogoWordmark({
       R
       <span
         className={cn(
-          "relative mx-[0.04em] inline-flex items-center justify-center text-primary",
+          "relative mx-[0.04em] inline-flex shrink-0 items-center justify-center text-primary",
           oSize
         )}
         aria-hidden
+        style={{ maxHeight: "1.1em", maxWidth: "1.1em" }}
       >
-        {/* Film reel O */}
-        <svg viewBox="0 0 24 24" className="h-full w-full" fill="currentColor">
-          <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="2.2" />
-          <circle cx="12" cy="12" r="3.2" />
-          <circle cx="12" cy="5.2" r="1.15" />
-          <circle cx="12" cy="18.8" r="1.15" />
-          <circle cx="5.2" cy="12" r="1.15" />
-          <circle cx="18.8" cy="12" r="1.15" />
-          <circle cx="7.1" cy="7.1" r="1" />
-          <circle cx="16.9" cy="7.1" r="1" />
-          <circle cx="7.1" cy="16.9" r="1" />
-          <circle cx="16.9" cy="16.9" r="1" />
+        {/* Film reel O — no root fill (prevents giant gold blob if size CSS fails) */}
+        <svg
+          viewBox="0 0 24 24"
+          className="block h-full w-full max-h-[1.1em] max-w-[1.1em]"
+          fill="none"
+          aria-hidden
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="9.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          />
+          <circle cx="12" cy="12" r="3.2" fill="currentColor" />
+          <circle cx="12" cy="5.2" r="1.15" fill="currentColor" />
+          <circle cx="12" cy="18.8" r="1.15" fill="currentColor" />
+          <circle cx="5.2" cy="12" r="1.15" fill="currentColor" />
+          <circle cx="18.8" cy="12" r="1.15" fill="currentColor" />
+          <circle cx="7.1" cy="7.1" r="1" fill="currentColor" />
+          <circle cx="16.9" cy="7.1" r="1" fill="currentColor" />
+          <circle cx="7.1" cy="16.9" r="1" fill="currentColor" />
+          <circle cx="16.9" cy="16.9" r="1" fill="currentColor" />
         </svg>
       </span>
       LLR

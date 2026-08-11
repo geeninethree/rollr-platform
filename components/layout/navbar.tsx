@@ -29,7 +29,7 @@ const publicLinks = [
 const creatorLinks = [
   { href: "/list", label: "List for ₹299/mo", desc: "Pricing & interest list" },
   { href: "/studio", label: "Portfolio", desc: "Build your listing" },
-  { href: "/inbox", label: "Inbox", desc: "Briefs (demo)" },
+  { href: "/inbox", label: "Inbox", desc: "Client briefs" },
 ];
 
 export function Navbar() {
@@ -131,10 +131,12 @@ export function Navbar() {
     pathname.startsWith("/login") || pathname.startsWith("/signup");
 
   return (
-    <header className="nav-frost sticky top-0 z-50">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-5">
-          <Logo size="md" />
+    <header className="sticky top-0 z-50 pt-3 sm:pt-4">
+      {/* Floating capsule — same max width as page content */}
+      <div className="page-shell">
+      <div className="flex h-14 w-full items-center justify-between gap-3 rounded-full border border-white/[0.08] bg-black/75 px-3 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:h-14 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+          <Logo size="sm" />
 
           <nav
             className="hidden items-center gap-0.5 md:flex"
@@ -147,10 +149,10 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap pressable",
+                    "rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors whitespace-nowrap pressable",
                     active
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                   )}
                 >
                   {link.label}
@@ -163,10 +165,10 @@ export function Navbar() {
                 type="button"
                 onClick={() => setCreatorsOpen((v) => !v)}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors pressable",
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors pressable",
                   creatorsActive || creatorsOpen
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    ? "bg-white/[0.08] text-white"
+                    : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                 )}
                 aria-expanded={creatorsOpen}
                 aria-haspopup="menu"
@@ -227,24 +229,14 @@ export function Navbar() {
                   role={profileRole}
                 />
               ) : (
-                <>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="hidden sm:inline-flex"
-                  >
-                    <Link href="/login">Sign in</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="hidden font-medium sm:inline-flex"
-                  >
-                    <Link href="/signup">Sign up</Link>
-                  </Button>
-                </>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="hidden text-white/55 hover:bg-white/[0.06] hover:text-white sm:inline-flex"
+                >
+                  <Link href="/login">Sign in</Link>
+                </Button>
               )}
               <Button
                 asChild
@@ -255,9 +247,9 @@ export function Navbar() {
                   onList && "ring-2 ring-primary/30"
                 )}
               >
-                <Link href="/list">
-                  <span className="hidden sm:inline">List — ₹299</span>
-                  <span className="sm:hidden">₹299</span>
+                <Link href="/signup?role=creator&next=/studio">
+                  <span className="hidden sm:inline">List · ₹299/mo</span>
+                  <span className="sm:hidden">List</span>
                 </Link>
               </Button>
             </>
@@ -273,12 +265,14 @@ export function Navbar() {
           </button>
         </div>
       </div>
+      </div>
 
       {open && (
         <nav
-          className="border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl md:hidden animate-rise"
+          className="page-shell mt-2 pb-3 md:hidden animate-rise"
           aria-label="Mobile"
         >
+        <div className="rounded-2xl border border-white/[0.08] bg-black/90 py-2 backdrop-blur-xl">
           <ul className="flex flex-col gap-1">
             {publicLinks.map((link) => {
               const active = link.match(pathname);
@@ -338,15 +332,16 @@ export function Navbar() {
                 Signed in as {profileName}
               </li>
             )}
-            <li className="mt-2">
+            <li className="mt-2 px-2">
               <Link
-                href="/list"
-                className="block rounded-md bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground pressable"
+                href="/signup?role=creator&next=/studio"
+                className="block rounded-full border border-primary/70 px-3 py-2.5 text-center text-sm font-semibold text-primary pressable"
               >
-                List Profile — ₹299/mo
+                List on ROLLR · ₹299/mo
               </Link>
             </li>
           </ul>
+          </div>
         </nav>
       )}
     </header>

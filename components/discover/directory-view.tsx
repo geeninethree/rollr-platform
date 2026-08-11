@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { CreatorGrid } from "@/components/discover/creator-grid";
-import { HeroSearch } from "@/components/discover/hero-search";
+import {
+  CreatorSignupBand,
+  HeroSearch,
+} from "@/components/discover/hero-search";
 import { HowItWorks } from "@/components/discover/how-it-works";
 import { Button } from "@/components/ui/button";
 import { fetchPublishedCreators } from "@/lib/directory";
@@ -55,8 +58,9 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
   );
 
   return (
-    <div className="bg-grid-fade">
-      <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="bg-grid-fade max-w-[100vw] overflow-x-hidden">
+      {/* One shell: hero + band + grid all same width */}
+      <div className="page-shell min-w-0 space-y-10 pb-16 pt-6 sm:space-y-12 sm:pb-20 sm:pt-8">
         <HeroSearch
           mode={mode}
           filters={filters}
@@ -70,48 +74,45 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
           resultCount={creators.length}
         />
 
-        <section id="directory-results" className="space-y-4 scroll-mt-20">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-                {isEdit ? "Editors in Mumbai" : "Photographers in Mumbai"}
+        <CreatorSignupBand />
+
+        <section id="directory-results" className="space-y-6 scroll-mt-24">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                {isEdit ? "Editors" : "Photographers"}
               </h2>
-              <p className="text-xs text-muted-foreground sm:text-sm">
-                Live listings · open a profile to send a brief
+              <p className="text-sm text-white/40">
+                {loading
+                  ? "Loading…"
+                  : `${creators.length} live listing${creators.length === 1 ? "" : "s"}`}
               </p>
             </div>
             {loading && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Loading…
-              </span>
+              <Loader2 className="h-4 w-4 animate-spin text-white/40" />
             )}
           </div>
 
           {error && (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <p className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
               {error}
-              {(error.includes("column") || error.includes("schema")) &&
-                " — run migrations 00003 and 00004 in the Supabase SQL Editor."}
             </p>
           )}
 
           {!loading && creators.length === 0 && !error ? (
-            <div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
-              <p className="text-base font-medium text-foreground">
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-20 text-center">
+              <p className="text-lg font-medium text-white">
                 No published creators yet
               </p>
-              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-                Be the first. Sign up as a creator, build your portfolio, and
-                publish your listing.
+              <p className="mx-auto mt-2 max-w-sm text-sm text-white/45">
+                Be the first. Sign up, build your portfolio, and submit for
+                review.
               </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
-                <Button asChild className="font-semibold">
-                  <Link href="/signup?role=creator&next=/studio">
-                    Sign up as creator
-                  </Link>
-                </Button>
-              </div>
+              <Button asChild className="mt-6 font-semibold">
+                <Link href="/signup?role=creator&next=/studio">
+                  List on ROLLR · ₹299/mo
+                </Link>
+              </Button>
             </div>
           ) : (
             <CreatorGrid
@@ -121,9 +122,10 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
               onClearFilters={() => setFilters(EMPTY_FILTERS)}
               emptyTitle={
                 isEdit
-                  ? "No editors match these filters"
-                  : "No photographers match these filters"
+                  ? "No editors match"
+                  : "No photographers match"
               }
+              emptyBody="Try another search or clear filters."
             />
           )}
         </section>

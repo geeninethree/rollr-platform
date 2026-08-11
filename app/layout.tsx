@@ -87,14 +87,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark max-w-[100vw] overflow-x-hidden">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-noise flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-noise flex min-h-screen max-w-[100vw] flex-col overflow-x-hidden font-sans text-foreground antialiased`}
       >
-        <DemoBanner />
-        <Navbar />
-        <main className="relative z-0 flex-1">{children}</main>
-        <Footer />
+        <div className="relative z-[1] flex min-h-screen min-w-0 flex-col">
+          <DemoBanner />
+          <Navbar />
+          <main className="relative z-[1] min-w-0 flex-1 overflow-x-hidden">
+            {children}
+          </main>
+          <Footer />
+        </div>
       </body>
     </html>
   );

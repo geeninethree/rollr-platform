@@ -52,14 +52,14 @@ export function PortfolioGallery({
   ];
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Selected work
+          <h2 className="text-lg font-semibold tracking-tight text-white">
+            Portfolio
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {modeWorks.length} pieces on ROLLR · click to enlarge
+          <p className="mt-0.5 text-sm text-white/40">
+            {modeWorks.length} pieces · click to enlarge
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -81,7 +81,7 @@ export function PortfolioGallery({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         {filtered.map((item, i) => (
           <button
             key={item.id}
@@ -90,16 +90,17 @@ export function PortfolioGallery({
               setIndex(modeWorks.findIndex((w) => w.id === item.id));
               setOpen(true);
             }}
-            className="group relative aspect-[4/5] overflow-hidden rounded-lg border border-border bg-secondary text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="media-frame group relative aspect-[4/5] max-h-[50vh] min-w-0 overflow-hidden rounded-2xl bg-secondary text-left shadow-lg shadow-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:max-h-none"
           >
             <Image
               src={item.url}
               alt={item.title || `${creatorName} work ${i + 1}`}
               fill
               sizes="(max-width: 640px) 50vw, 33vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              style={{ objectFit: "cover" }}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-8">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-3 pt-10">
               <div className="flex flex-wrap gap-1">
                 {item.is_featured && (
                   <Badge className="h-5 bg-primary/90 px-1.5 text-[9px] text-primary-foreground hover:bg-primary/90">
@@ -116,7 +117,7 @@ export function PortfolioGallery({
                 )}
               </div>
               {item.title && (
-                <p className="mt-1 truncate text-[11px] font-medium text-white">
+                <p className="mt-1 truncate text-[12px] font-medium text-white">
                   {item.title}
                 </p>
               )}

@@ -104,8 +104,71 @@ export function AuthForm({
           clearReferralCodeLocal();
         }
 
+        // Persist role on profiles (enum must include recruiter — migration 00009)
+        let roleNote = "";
+        if (newId) {
+          if (role === "recruiter") {
+            if (data.session) {
+              const { claimRecruiterPath } = await import("@/lib/roles");
+              const claimed = await claimRecruiterPath(supabase, newId, {
+                full_name: fullName.trim() || email.split("@")[0],
+                notes:
+                  "Auto-added on recruiter signup — multi-job pending activation",
+              });
+              if (!claimed.ok) {
+                // Account exists; don't block — surface soft warning
+                roleNote = ` Role/waitlist issue: ${claimed.error || "unknown"}. Use Job board → Join recruiter waitlist.`;
+              } else {
+                roleNote = claimed.waitlisted
+                  ? " You’re on the multi-job waitlist (Recruiter ₹399)."
+                  : claimed.error
+                    ? ` ${claimed.error}`
+                    : " Multi-job pending activation.";
+              }
+            } else {
+              // No session yet (email confirm on) — waitlist is public insert
+              const { submitWaitlist } = await import("@/lib/waitlist");
+              const wl = await submitWaitlist(supabase, {
+                full_name: fullName.trim() || email.split("@")[0],
+                email: email.trim(),
+                role: "recruiter",
+                primary_category: "Multi-job board",
+                notes:
+                  "Recruiter signup (confirm email pending) — multi-job waitlist",
+              });
+              roleNote = wl.ok
+                ? " You’re on the multi-job waitlist (Recruiter ₹399)."
+                : ` Waitlist note: ${wl.error || "could not save"} — try Job board after confirm.`;
+            }
+          } else if (data.session) {
+            const { error: roleError } = await supabase
+              .from("profiles")
+              .update({
+                role,
+                full_name: fullName.trim() || email.split("@")[0],
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", newId);
+            if (roleError) {
+              roleNote = ` Role save issue: ${roleError.message}.`;
+            }
+          }
+        }
+
         // If email confirmation is off, session exists immediately
         if (data.session) {
+          if (role === "recruiter") {
+            setMessage(
+              "Account created. You can post 1 open job now." +
+                (roleNote ||
+                  " Multi-job (Recruiter ₹399) is on the waitlist until we activate it.")
+            );
+            setTimeout(() => {
+              router.push(next || "/job-board");
+              router.refresh();
+            }, 1800);
+            return;
+          }
           router.push(next);
           router.refresh();
           return;
@@ -113,6 +176,10 @@ export function AuthForm({
 
         setMessage(
           "Check your email to confirm your account — or disable “Confirm email” in Supabase Auth settings for local testing." +
+            (role === "recruiter"
+              ? roleNote ||
+                " You’re also on the recruiter waitlist for multi-job access."
+              : "") +
             (code
               ? ` Referral ${code} will apply when you confirm.`
               : "")
@@ -206,11 +273,12 @@ export function AuthForm({
           </div>
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">I am a…</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(
                 [
                   ["client", "Client"],
                   ["creator", "Creator"],
+                  ["recruiter", "Recruiter"],
                 ] as const
               ).map(([value, label]) => (
                 <button
@@ -218,7 +286,7 @@ export function AuthForm({
                   type="button"
                   onClick={() => setRole(value)}
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                    "rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:text-sm",
                     role === value
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-secondary text-muted-foreground hover:text-foreground"
@@ -229,7 +297,8 @@ export function AuthForm({
               ))}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Clients send briefs. Creators list profiles and accept jobs.
+              Client: post 1 free open job. Creator: portfolio + pitch. Recruiter:
+              multi-job board (₹399/mo when live — join waitlist on signup).
             </p>
           </div>
         </>

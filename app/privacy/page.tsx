@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       <h2>1. Data we collect</h2>
       <ul>
         <li>
-          <strong>Account data:</strong> name, email, role (client/creator),
+          <strong>Account data:</strong> name, email, role (client/creator/recruiter),
           optional phone, avatar.
         </li>
         <li>

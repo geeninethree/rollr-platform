@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, User } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +41,19 @@ export function UserMenu({ email, fullName, role }: UserMenuProps) {
 
   const initial = (fullName || email || "?").charAt(0).toUpperCase();
 
+  const primaryHref =
+    role === "creator"
+      ? "/studio"
+      : role === "recruiter"
+        ? "/job-board"
+        : "/job-board";
+  const primaryLabel =
+    role === "creator"
+      ? "My portfolio"
+      : role === "recruiter"
+        ? "My jobs"
+        : "Job board";
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -68,13 +81,57 @@ export function UserMenu({ email, fullName, role }: UserMenuProps) {
             </p>
           </div>
           <Link
-            href={role === "creator" ? "/studio" : "/list"}
+            href={primaryHref}
             className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary"
             onClick={() => setOpen(false)}
           >
-            <User className="h-3.5 w-3.5" />
-            {role === "creator" ? "My portfolio" : "List as creator"}
+            {role === "creator" ? (
+              <User className="h-3.5 w-3.5" />
+            ) : (
+              <Briefcase className="h-3.5 w-3.5" />
+            )}
+            {primaryLabel}
           </Link>
+          {role === "creator" && (
+            <Link
+              href="/job-board"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              <Briefcase className="h-3.5 w-3.5" />
+              Job board (pitch)
+            </Link>
+          )}
+          {(role === "client" || role === "recruiter") && (
+            <Link
+              href="/signup?role=creator&next=/studio"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              <User className="h-3.5 w-3.5" />
+              List as creator
+            </Link>
+          )}
+          {(role === "client" || role === "creator") && (
+            <Link
+              href="/signup?role=recruiter&next=/job-board"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              <Briefcase className="h-3.5 w-3.5" />
+              Multi-job waitlist (₹399)
+            </Link>
+          )}
+          {role === "recruiter" && (
+            <Link
+              href="/job-board#recruiter"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              <Briefcase className="h-3.5 w-3.5" />
+              Recruiter plan status
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => void signOut()}

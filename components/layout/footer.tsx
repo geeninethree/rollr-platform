@@ -25,7 +25,7 @@ const legalLinks = [
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-border bg-card/20">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
+      <div className="page-shell grid gap-10 py-12 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
         <div className="max-w-sm space-y-3">
           <Logo size="lg" />
           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -93,7 +93,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-border/70">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="page-shell flex flex-col gap-2 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} ROLLR · Mumbai</span>
           <span>Alpha · See Terms for platform role &amp; liability</span>
         </div>

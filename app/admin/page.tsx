@@ -19,8 +19,10 @@ import {
 } from "@/lib/admin-listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  activateRecruiterByEmail,
   fetchWaitlist,
   updateWaitlistStatus,
+  waitlistRoleLabel,
   type WaitlistSignup,
   type WaitlistStatus,
 } from "@/lib/waitlist";
@@ -76,13 +78,30 @@ export default function AdminPage() {
 
     setAllowed(true);
 
+    // UI allowlist alone is not enough — RLS needs profiles.is_admin
+    const missingDbAdmin = !isAdminFlag;
+
     const [wl, li] = await Promise.all([
       fetchWaitlist(supabase),
       fetchListingsByStatus(supabase, "pending_review"),
     ]);
-    if (wl.error) setError(wl.error);
-    else if (li.error) setError(li.error);
-    else setError(null);
+    if (missingDbAdmin) {
+      setError(
+        `profiles.is_admin is false for ${userEmail || "this account"}. Email allowlist opens this page but RLS blocks data. Run in Supabase SQL: update public.profiles set is_admin = true where email = '${userEmail || "you@example.com"}'; Also apply migrations 00008 + 00011.`
+      );
+    } else if (wl.error || li.error) {
+      const raw = wl.error || li.error || "";
+      const lower = raw.toLowerCase();
+      let hint = "";
+      if (
+        lower.includes("column") ||
+        lower.includes("does not exist") ||
+        lower.includes("relation")
+      ) {
+        hint = " — run migrations 00008–00012 in Supabase SQL Editor.";
+      }
+      setError(`${raw}${hint}`);
+    } else setError(null);
     setRows(wl.rows);
     setListings(li.rows);
     setLoading(false);
@@ -96,12 +115,23 @@ export default function AdminPage() {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
     setBusyId(id);
+    const row = rows.find((r) => r.id === id);
     const result = await updateWaitlistStatus(supabase, id, status);
-    setBusyId(null);
     if (result.error) {
+      setBusyId(null);
       setError(result.error);
       return;
     }
+    // Approving recruiter waitlist → try activate multi-job on their account
+    if (status === "approved" && row?.role === "recruiter") {
+      const act = await activateRecruiterByEmail(supabase, row.email);
+      if (!act.ok) {
+        setError(
+          `Waitlist approved. Multi-job activation: ${act.error}`
+        );
+      }
+    }
+    setBusyId(null);
     setRows((prev) =>
       prev.map((r) =>
         r.id === id
@@ -217,12 +247,11 @@ export default function AdminPage() {
         </div>
 
         {error && (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <p
+            className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+            role="alert"
+          >
             {error}
-            {(error.includes("relation") ||
-              error.includes("schema") ||
-              error.includes("is_admin")) &&
-              " — run migration 00008_admin_reviews_portfolio.sql"}
           </p>
         )}
 
@@ -329,18 +358,21 @@ export default function AdminPage() {
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                       <p className="text-muted-foreground">
-                        Role:{" "}
+                        Interest:{" "}
                         <span className="text-foreground">
-                          {row.role === "both"
-                            ? "Photographer + editor"
-                            : row.role === "shoot"
-                              ? "Photographer"
-                              : "Editor"}
+                          {waitlistRoleLabel(row.role)}
                         </span>
                         {row.primary_category
                           ? ` · ${row.primary_category}`
                           : ""}
                       </p>
+                      {row.role === "recruiter" && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Approve → tries to set multi-job active on matching
+                          account (needs migration 00011 + profiles.is_admin).
+                          No auto-email to the user — message them yourself.
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-1.5">
                         {WAITLIST_STATUSES.map((s) => (
                           <button

@@ -1,19 +1,33 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Clapperboard, FileText, Search, Video, X } from "lucide-react";
+import { MapPin, Search, Sparkles, Tag, X } from "lucide-react";
+// Sparkles used by CreatorSignupBand
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { CreatorPricingCta } from "@/components/discover/creator-pricing-cta";
 import { hasActiveFilters } from "@/lib/filters";
 import {
   EDIT_SPECIALTIES,
-  LOCATIONS,
+  matchLocations,
   SHOOT_CATEGORIES,
 } from "@/lib/mock-data";
 import type { SearchFilters, ServiceMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+/** Contained hero photos — CSS background only (never layout-stretch) */
+const HERO_SHOOT =
+  "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1600&q=80";
+const HERO_EDIT =
+  "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1600&q=80";
+
+const SHOOT_CHIPS = ["Wedding", "Corporate", "Portraits", "Nightclub"] as const;
+const EDIT_CHIPS = [
+  "Wedding film",
+  "Reels / vertical",
+  "Colour grade",
+  "Corporate highlight",
+] as const;
 
 type HeroSearchProps = {
   mode: ServiceMode;
@@ -24,11 +38,9 @@ type HeroSearchProps = {
   resultCount: number;
 };
 
-function toggleInList(list: string[], value: string) {
-  return list.includes(value)
-    ? list.filter((v) => v !== value)
-    : [...list, value];
-}
+type Suggestion =
+  | { kind: "location"; label: string }
+  | { kind: "category"; label: string };
 
 export function HeroSearch({
   mode,
@@ -40,259 +52,369 @@ export function HeroSearch({
 }: HeroSearchProps) {
   const active = hasActiveFilters(filters, mode);
   const isEdit = mode === "edit";
-  const categoryPool = isEdit ? [...EDIT_SPECIALTIES] : [...SHOOT_CATEGORIES];
+  const chips = isEdit ? EDIT_CHIPS : SHOOT_CHIPS;
 
-  const quickChips = isEdit
-    ? [
-        { id: "Wedding film", kind: "category" as const },
-        { id: "Reels / vertical", kind: "category" as const },
-        { id: "Colour grade", kind: "category" as const },
-        { id: "Under ₹15k", kind: "under15k" as const },
-        { id: "Also shoots", kind: "alsoShoots" as const },
-      ]
-    : [
-        { id: "Wedding", kind: "category" as const },
-        { id: "Nightclub", kind: "category" as const },
-        { id: "Corporate", kind: "category" as const },
-        { id: "Under ₹15k", kind: "under15k" as const },
-        { id: "Also edits", kind: "alsoEdits" as const },
-      ];
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = useMemo((): Suggestion[] => {
+    const q = filters.query.trim();
+    const categoryPool = isEdit
+      ? [...EDIT_SPECIALTIES]
+      : [...SHOOT_CATEGORIES];
+
+    const locs = matchLocations(q, 6).map((label) => ({
+      kind: "location" as const,
+      label,
+    }));
+
+    if (q.length < 1) return locs;
+
+    const ql = q.toLowerCase();
+    const cats = categoryPool
+      .filter((c) => c.toLowerCase().includes(ql))
+      .map((label) => ({ kind: "category" as const, label }));
+
+    return [...locs, ...cats].slice(0, 8);
+  }, [filters.query, isEdit]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setSuggestOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => {
+    setHighlight(0);
+  }, [filters.query, suggestOpen]);
+
+  function toggleCategory(id: string) {
+    const has = filters.categories.includes(id);
+    onChange({
+      ...filters,
+      categories: has
+        ? filters.categories.filter((c) => c !== id)
+        : [...filters.categories, id],
+    });
+  }
+
+  function applySuggestion(s: Suggestion) {
+    if (s.kind === "location") {
+      const has = filters.locations.includes(s.label);
+      onChange({
+        ...filters,
+        query: "",
+        locations: has
+          ? filters.locations.filter((l) => l !== s.label)
+          : [...filters.locations, s.label],
+      });
+    } else {
+      const has = filters.categories.includes(s.label);
+      onChange({
+        ...filters,
+        query: "",
+        categories: has
+          ? filters.categories.filter((c) => c !== s.label)
+          : [...filters.categories, s.label],
+      });
+    }
+    setSuggestOpen(false);
+  }
+
+  function removeLocation(loc: string) {
+    onChange({
+      ...filters,
+      locations: filters.locations.filter((l) => l !== loc),
+    });
+  }
+
+  const heroUrl = isEdit ? HERO_EDIT : HERO_SHOOT;
 
   return (
-    <section className="space-y-5">
-      {/* Headline left · creator pricing card top-right */}
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-        <div className="min-w-0 flex-1 space-y-4">
-          <div className="max-w-xl space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Mumbai · 0% commission
-            </p>
-            <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.5rem]">
-              {isEdit ? "Find an editor" : "Find a photographer"}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {resultCount} creators · open a profile to send a brief
-            </p>
-          </div>
-
+    /* Parent directory-view already has page-shell — do not nest another */
+    <section className="relative w-full min-w-0 max-w-full">
+      {/* Contained wide hero — fixed box, CSS cover only (no next/image fill) */}
+      <div
+        className={cn(
+          "w-full min-w-0 overflow-hidden rounded-2xl border border-white/[0.08]",
+          "bg-[hsl(240_5%_7%)] shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)]"
+        )}
+      >
+        <div className="grid min-w-0 lg:grid-cols-2">
+          {/*
+            Fixed height + max-height — photo is a BACKGROUND, not a layout child.
+            This is the only reliable way to stop full-page stretch glitches.
+          */}
           <div
-            className="flex max-w-md rounded-xl border border-border bg-card p-1 shadow-sm"
-            role="tablist"
-            aria-label="Directory section"
+            className="media-frame relative h-[220px] w-full max-h-[42vh] min-h-[180px] sm:h-[300px] sm:max-h-[46vh] lg:h-[400px] lg:max-h-none"
+            role="img"
+            aria-label={isEdit ? "Editor workspace" : "Photography"}
+            style={{
+              backgroundColor: "hsl(240 5% 8%)",
+              backgroundImage: `url(${heroUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <Link
-              href="/"
-              role="tab"
-              aria-selected={!isEdit}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
-                !isEdit
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-            >
-              <Video className="h-4 w-4" />
-              Photographers
-            </Link>
-            <Link
-              href="/editors"
-              role="tab"
-              aria-selected={isEdit}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
-                isEdit
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-            >
-              <Clapperboard className="h-4 w-4" />
-              Editors
-            </Link>
-          </div>
-        </div>
-
-        <CreatorPricingCta variant="hero" />
-      </div>
-
-      {/* Search panel — product-precise, not heavy gold chrome */}
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-lg shadow-black/30 sm:p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-            Search {isEdit ? "editors" : "photographers"}
-          </p>
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {resultCount} available
-          </span>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-[1.15fr_0.95fr_1.15fr_auto]">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Location
-            </label>
-            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-input bg-background p-2">
-              {LOCATIONS.map((loc) => {
-                const selected = filters.locations.includes(loc);
-                return (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        ...filters,
-                        locations: toggleInList(filters.locations, loc),
-                      })
-                    }
-                    className={cn(
-                      "rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
-                      selected
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {loc}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label
-              htmlFor="event-date"
-              className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-            >
-              Event date
-            </label>
-            <Input
-              id="event-date"
-              type="date"
-              value={filters.eventDate}
-              onChange={(e) =>
-                onChange({ ...filters, eventDate: e.target.value })
-              }
-              className="h-10 bg-background text-sm"
+            <div
+              className="pointer-events-none absolute inset-0 z-[1]"
+              style={{
+                background: [
+                  "linear-gradient(to right, transparent 55%, hsl(240 5% 7% / 0.9) 100%)",
+                  "linear-gradient(to top, hsl(240 5% 7% / 0.55) 0%, transparent 45%)",
+                ].join(", "),
+              }}
             />
+            <span className="absolute left-4 top-4 z-[2] rounded-full bg-primary px-3 py-1 text-[11px] font-semibold tracking-wide text-primary-foreground shadow-md">
+              Featured
+            </span>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {isEdit ? "Specialty" : "Category"}
-            </label>
-            <div className="flex max-h-16 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-input bg-background p-2">
-              {categoryPool.map((cat) => {
-                const selected = filters.categories.includes(cat);
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        ...filters,
-                        categories: toggleInList(filters.categories, cat),
-                      })
-                    }
-                    className={cn(
-                      "rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
-                      selected
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-end">
-            {active && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={onClear}
-                className="h-10 w-10 shrink-0 text-muted-foreground"
-                aria-label="Clear filters"
+          <div className="flex min-w-0 flex-col justify-center gap-6 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-[400px] lg:px-10">
+            <div className="space-y-3">
+              <div
+                className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
+                role="tablist"
               >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              type="button"
-              onClick={onSearch}
-              size="lg"
-              className="h-10 min-w-[7.5rem] font-semibold"
-            >
-              <Search className="h-4 w-4" />
-              Search
-            </Button>
-            <Button
-              asChild
-              type="button"
-              variant="outline"
-              size="lg"
-              className="h-10 min-w-[7.5rem] font-semibold"
-            >
-              <Link href="/job-board">
-                <FileText className="h-4 w-4" />
-                Post a brief
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Quick
-          </span>
-          {quickChips.map((chip) => {
-            let selected = false;
-            if (chip.kind === "category") {
-              selected = filters.categories.includes(chip.id);
-            } else if (chip.kind === "under15k") {
-              selected = filters.under15k;
-            } else if (chip.kind === "alsoEdits") {
-              selected = filters.alsoEdits;
-            } else if (chip.kind === "alsoShoots") {
-              selected = filters.alsoShoots;
-            }
-
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => {
-                  if (chip.kind === "category") {
-                    onChange({
-                      ...filters,
-                      categories: toggleInList(filters.categories, chip.id),
-                    });
-                  } else if (chip.kind === "under15k") {
-                    onChange({ ...filters, under15k: !filters.under15k });
-                  } else if (chip.kind === "alsoEdits") {
-                    onChange({ ...filters, alsoEdits: !filters.alsoEdits });
-                  } else if (chip.kind === "alsoShoots") {
-                    onChange({ ...filters, alsoShoots: !filters.alsoShoots });
-                  }
-                }}
-              >
-                <Badge
-                  variant={selected ? "default" : "outline"}
+                <Link
+                  href="/"
                   className={cn(
-                    "cursor-pointer rounded-full px-2.5 py-0.5 text-[11px] font-medium",
-                    selected &&
-                      "bg-primary text-primary-foreground hover:bg-primary/90"
+                    "rounded-full px-3.5 py-1.5 transition-colors",
+                    !isEdit
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {chip.id}
-                </Badge>
-              </button>
-            );
-          })}
+                  Photographers
+                </Link>
+                <Link
+                  href="/editors"
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 transition-colors",
+                    isEdit
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Editors
+                </Link>
+              </div>
+
+              <h1 className="text-balance text-[2rem] font-semibold leading-[1.08] tracking-tight text-white sm:text-[2.5rem] lg:text-[2.75rem]">
+                {isEdit ? "Find an editor" : "Find a photographer"}
+              </h1>
+              <p className="text-[15px] text-white/50">
+                Mumbai · 0% commission
+              </p>
+              <p className="text-sm text-white/40">
+                {resultCount} available · send a brief from any profile
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Search + suggestions */}
+              <div className="relative" ref={wrapRef}>
+                <Search className="pointer-events-none absolute left-4 top-3.5 z-[1] h-4 w-4 text-white/35" />
+                <Input
+                  value={filters.query}
+                  onChange={(e) => {
+                    onChange({ ...filters, query: e.target.value });
+                    setSuggestOpen(true);
+                  }}
+                  onFocus={() => setSuggestOpen(true)}
+                  onKeyDown={(e) => {
+                    if (!suggestOpen || suggestions.length === 0) {
+                      if (e.key === "Enter") onSearch();
+                      return;
+                    }
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlight((h) =>
+                        Math.min(h + 1, suggestions.length - 1)
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlight((h) => Math.max(h - 1, 0));
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      applySuggestion(suggestions[highlight]);
+                      onSearch();
+                    } else if (e.key === "Escape") {
+                      setSuggestOpen(false);
+                    }
+                  }}
+                  placeholder="Search name, style, or area (e.g. Bandra)"
+                  className="h-12 rounded-full border-white/[0.08] bg-white/[0.04] pl-11 pr-12 text-[15px] text-white placeholder:text-white/30 focus-visible:ring-primary/40"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={suggestOpen}
+                  aria-controls="search-suggestions"
+                />
+                {active && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClear();
+                      setSuggestOpen(false);
+                    }}
+                    className="absolute right-3 top-3 z-[1] rounded-full p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
+                    aria-label="Clear"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+
+                {suggestOpen && suggestions.length > 0 && (
+                  <ul
+                    id="search-suggestions"
+                    role="listbox"
+                    className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#141416] py-1.5 shadow-2xl shadow-black/60"
+                  >
+                    {suggestions.map((s, i) => (
+                      <li key={`${s.kind}-${s.label}`} role="presentation">
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={i === highlight}
+                          onMouseEnter={() => setHighlight(i)}
+                          onClick={() => {
+                            applySuggestion(s);
+                            onSearch();
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors",
+                            i === highlight
+                              ? "bg-white/[0.08] text-white"
+                              : "text-white/70 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          {s.kind === "location" ? (
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          ) : (
+                            <Tag className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate">
+                            {s.label}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-wide text-white/30">
+                            {s.kind === "location" ? "Area" : "Category"}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Selected areas */}
+              {filters.locations.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {filters.locations.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => removeLocation(loc)}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2.5 py-1 text-[11px] font-medium text-primary"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      {loc}
+                      <X className="h-3 w-3 opacity-70" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {chips.map((id) => {
+                  const selected = filters.categories.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleCategory(id)}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors",
+                        selected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-white/[0.1] bg-transparent text-white/55 hover:border-white/20 hover:text-white/90"
+                      )}
+                    >
+                      {id}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <Button
+                  type="button"
+                  onClick={onSearch}
+                  size="lg"
+                  className="h-11 rounded-full px-8 font-semibold"
+                >
+                  Search
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/** Creator band — use inside `.page-shell` so width matches the grid */
+export function CreatorSignupBand() {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-primary/25",
+        "bg-gradient-to-br from-primary/[0.12] via-[hsl(240_5%_8%)] to-[hsl(240_6%_5%)]",
+        "px-5 py-5 sm:px-7 sm:py-6"
+      )}
+    >
+      <div
+        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/15 blur-3xl"
+        aria-hidden
+      />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div className="space-y-1">
+            <p className="text-base font-semibold tracking-tight text-white sm:text-lg">
+              Photographers &amp; editors — list on ROLLR
+            </p>
+            <p className="max-w-xl text-sm text-white/50">
+              Unlimited briefs. Zero commission on bookings.{" "}
+              <span className="text-primary">₹299/mo</span> when billing is live
+              — build your portfolio free in alpha.
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button asChild size="lg" className="h-11 font-semibold">
+            <Link href="/signup?role=creator&next=/studio">
+              Sign up as creator
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="h-11 font-semibold"
+          >
+            <Link href="/list">See pricing</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
