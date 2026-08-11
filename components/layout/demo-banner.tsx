@@ -27,7 +27,7 @@ export function DemoBanner() {
         <p className="min-w-0 flex-1 text-muted-foreground">
           <span className="font-medium text-foreground/90">Alpha</span>
           <span className="mx-1.5 text-border">·</span>
-          Live listings from published creators
+          Free listing for now · manual review · 0% commission
           <span className="hidden sm:inline">
             {" · "}
             <Link

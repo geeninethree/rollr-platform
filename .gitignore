@@ -27,6 +27,10 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+
+# local previews / one-off artifacts
+/tmp-email-preview/
 
 # vercel
 .vercel

@@ -77,8 +77,8 @@ export default function SupabaseSetupPage() {
             Connect Supabase
           </h1>
           <p className="text-sm text-muted-foreground">
-            The app still uses mock data for the directory until we wire live
-            queries. This page only checks project + schema connectivity.
+            Directory uses live published listings from Supabase. This page
+            checks project keys and schema connectivity only.
           </p>
         </div>
 
