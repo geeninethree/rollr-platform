@@ -81,6 +81,12 @@ export async function submitWaitlist(
 
   if (error) {
     const msg = error.message || "Could not save interest";
+    if (msg.includes("RATE_LIMIT")) {
+      return {
+        ok: false,
+        error: "Too many attempts from this email. Please try again in an hour.",
+      };
+    }
     if (
       msg.toLowerCase().includes("relation") ||
       msg.toLowerCase().includes("does not exist") ||
@@ -89,7 +95,7 @@ export async function submitWaitlist(
     ) {
       return {
         ok: false,
-        error: `${msg} — run migrations 00007 and 00010_waitlist_recruiter.sql`,
+        error: `${msg} — run migrations 00007, 00010, and 00014 if missing`,
       };
     }
     return { ok: false, error: msg };

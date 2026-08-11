@@ -147,6 +147,18 @@ export async function createInquiryRemote(
 
   if (error) {
     const msg = error.message || "Failed to send brief";
+    if (msg.includes("RATE_LIMIT")) {
+      return {
+        error: "Too many briefs from this contact. Please try again later.",
+        source: "local",
+      };
+    }
+    if (msg.includes("CREATOR_NOT_PUBLIC") || msg.includes("CREATOR_NOT_FOUND")) {
+      return {
+        error: "This creator is not live on the directory yet.",
+        source: "local",
+      };
+    }
     // FK fail if creator id not real uuid listing
     if (
       msg.includes("foreign key") ||
@@ -154,11 +166,11 @@ export async function createInquiryRemote(
       msg.toLowerCase().includes("relation") ||
       msg.toLowerCase().includes("does not exist")
     ) {
-      // Local fallback for demo / missing migration
+      // Local fallback for demo / missing migration — still warn
       const local = createInquiry(input);
       return {
         inquiry: local,
-        error: `${msg} — brief saved locally only. Run 00007 if on live listings.`,
+        error: `${msg} — brief saved locally only. Run migrations 00007 + 00014 if on live listings.`,
         source: "local",
       };
     }

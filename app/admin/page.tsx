@@ -78,18 +78,21 @@ export default function AdminPage() {
 
     setAllowed(true);
 
-    // UI allowlist alone is not enough — RLS needs profiles.is_admin
-    const missingDbAdmin = !isAdminFlag;
+    // Admin UI requires profiles.is_admin (email allowlist is not enough / not used in browser)
+    if (!isAdminFlag) {
+      setAllowed(false);
+      setError(
+        `Admin requires profiles.is_admin = true. In Supabase SQL: update public.profiles set is_admin = true where email = '${userEmail || "you@example.com"}';`
+      );
+      setLoading(false);
+      return;
+    }
 
     const [wl, li] = await Promise.all([
       fetchWaitlist(supabase),
       fetchListingsByStatus(supabase, "pending_review"),
     ]);
-    if (missingDbAdmin) {
-      setError(
-        `profiles.is_admin is false for ${userEmail || "this account"}. Email allowlist opens this page but RLS blocks data. Run in Supabase SQL: update public.profiles set is_admin = true where email = '${userEmail || "you@example.com"}'; Also apply migrations 00008 + 00011.`
-      );
-    } else if (wl.error || li.error) {
+    if (wl.error || li.error) {
       const raw = wl.error || li.error || "";
       const lower = raw.toLowerCase();
       let hint = "";
@@ -98,7 +101,7 @@ export default function AdminPage() {
         lower.includes("does not exist") ||
         lower.includes("relation")
       ) {
-        hint = " — run migrations 00008–00012 in Supabase SQL Editor.";
+        hint = " — run migrations 00008–00014 in Supabase SQL Editor.";
       }
       setError(`${raw}${hint}`);
     } else setError(null);
@@ -169,8 +172,8 @@ export default function AdminPage() {
         <h1 className="text-xl font-semibold">Admin only</h1>
         <p className="text-sm text-muted-foreground">
           Sign in as an admin (
-          <code className="text-primary">profiles.is_admin</code> or{" "}
-          <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code>).
+          <code className="text-primary">profiles.is_admin = true</code> on your
+          account).
           {email ? (
             <>
               {" "}

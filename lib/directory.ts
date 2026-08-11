@@ -37,7 +37,7 @@ type Row = {
   review_count?: number | null;
   profiles: {
     full_name: string;
-    email: string;
+    email?: string;
     avatar_url: string | null;
   } | null;
 };
@@ -82,7 +82,8 @@ export function rowToCreatorCard(row: Row): CreatorCardModel {
     id: row.id,
     profile_id: row.profile_id,
     full_name: profile?.full_name || "Creator",
-    email: profile?.email || "",
+    // Never pull profile emails into public directory payloads
+    email: "",
     avatar_url: profile?.avatar_url || null,
     bio: row.bio,
     starting_price: fromPrice,
@@ -148,7 +149,6 @@ export async function fetchPublishedCreators(
       review_count,
       profiles!inner (
         full_name,
-        email,
         avatar_url
       )
     `
@@ -186,7 +186,6 @@ export async function fetchPublishedCreators(
           works,
           profiles!inner (
             full_name,
-            email,
             avatar_url
           )
         `
@@ -246,7 +245,6 @@ export async function fetchCreatorById(
       review_count,
       profiles!inner (
         full_name,
-        email,
         avatar_url
       )
     `
@@ -280,7 +278,6 @@ export async function fetchCreatorById(
         works,
         profiles!inner (
           full_name,
-          email,
           avatar_url
         )
       `
@@ -299,5 +296,10 @@ export async function fetchCreatorById(
   }
 
   if (!data) return { creator: null };
-  return { creator: rowToCreatorCard(data as unknown as Row) };
+  // RLS only returns published (or owner/admin). Treat non-published as missing for public.
+  const row = data as unknown as Row;
+  if (row.listing_status && row.listing_status !== "published") {
+    return { creator: null };
+  }
+  return { creator: rowToCreatorCard(row) };
 }

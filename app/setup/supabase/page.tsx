@@ -244,6 +244,13 @@ export default function SupabaseSetupPage() {
               — fix jobs ↔ pitches RLS infinite recursion
             </li>
             <li>
+              <code className="text-primary">
+                supabase/migrations/00014_security_hardening.sql
+              </code>{" "}
+              — published-only listings, review token RPCs, brief/waitlist rate
+              limits
+            </li>
+            <li>
               <code className="text-primary">.env.local</code> — keys +{" "}
               <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code> for{" "}
               <Link href="/admin" className="text-primary underline">
