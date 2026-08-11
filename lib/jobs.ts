@@ -74,7 +74,7 @@ export async function fetchOpenJobs(
     if (msg.includes("open_jobs_board") || msg.includes("does not exist")) {
       return {
         jobs: [],
-        error: `${error.message} — run migration 00012_jobs_public_privacy.sql (and 00009)`,
+        error: `${error.message} — run migrations 00009, 00012, 00013 (jobs board + RLS fix)`,
       };
     }
     return { jobs: [], error: error.message };

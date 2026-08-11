@@ -238,6 +238,12 @@ export default function SupabaseSetupPage() {
               — public board hides poster WhatsApp (view + tighter RLS)
             </li>
             <li>
+              <code className="text-primary">
+                supabase/migrations/00013_jobs_rls_no_recursion.sql
+              </code>{" "}
+              — fix jobs ↔ pitches RLS infinite recursion
+            </li>
+            <li>
               <code className="text-primary">.env.local</code> — keys +{" "}
               <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code> for{" "}
               <Link href="/admin" className="text-primary underline">
