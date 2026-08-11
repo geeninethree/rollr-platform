@@ -141,7 +141,7 @@ async function notifyAdminsOfWaitlist(payload: {
 
     const site =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "https://rollr-platform-gig.vercel.app";
+      "https://rollrgigs.vercel.app";
     const mail = waitlistAdminEmail({
       fullName: payload.full_name,
       email: payload.email,

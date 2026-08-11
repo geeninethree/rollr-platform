@@ -54,7 +54,7 @@ export async function markJobCompleteAndCreateReviewLink(
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_SITE_URL ||
-        "https://rollr-platform-gig.vercel.app";
+        "https://rollrgigs.vercel.app";
 
   return {
     token,
