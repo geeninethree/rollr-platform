@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
+  briefAdminCopyEmail,
   briefNotifyEmail,
   getNotifyAdminEmails,
   sendEmail,
@@ -85,20 +86,20 @@ export async function POST(req: Request) {
       (a) => a.toLowerCase() !== to.toLowerCase()
     );
     if (admins.length > 0 && !result.skipped) {
+      const adminMail = briefAdminCopyEmail({
+        creatorName: body.creator_name,
+        creatorEmail: to,
+        clientName: body.client_name,
+        category: body.category || "Brief",
+        location: body.location || "Mumbai",
+        message: body.message,
+        inboxUrl: `${site}/inbox`,
+      });
       void sendEmail({
         to: admins,
-        subject: `[ROLLR] Brief for ${body.creator_name}: ${body.client_name}`,
-        text: [
-          `New brief on ROLLR`,
-          `Creator: ${body.creator_name} (${to})`,
-          `Client: ${body.client_name}`,
-          `${body.category || "Brief"} · ${body.location || "Mumbai"}`,
-          ``,
-          body.message,
-          ``,
-          `Creator inbox: ${site}/inbox`,
-        ].join("\n"),
-        html: `<p>New brief for <strong>${body.creator_name}</strong> (${to}).</p><p>Client: ${body.client_name}</p><p>${body.message}</p><p><a href="${site}/inbox">Creator inbox</a></p>`,
+        subject: adminMail.subject,
+        html: adminMail.html,
+        text: adminMail.text,
       });
     }
 
