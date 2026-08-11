@@ -1,9 +1,11 @@
 -- Public job board must NOT expose poster_whatsapp / poster_email.
 -- App previously filtered columns, but RLS allowed select * on open jobs.
 
--- 1) Public-safe view (no contact fields)
+-- 1) Public-safe board was originally a SECURITY DEFINER view.
+-- Supabase advisor flags those; 00015 replaces it with list_open_jobs_board().
+-- Kept for mid-migration installs only — prefer 00015.
 create or replace view public.open_jobs_board
-with (security_invoker = false)
+with (security_invoker = true)
 as
 select
   j.id,
@@ -26,7 +28,7 @@ where j.status = 'open';
 grant select on public.open_jobs_board to anon, authenticated;
 
 comment on view public.open_jobs_board is
-  'Public job board listing without poster contact. Use job_poster_contact_after_accept for WA after pitch accept.';
+  'DEPRECATED: use list_open_jobs_board() (00015). security_invoker=true; open jobs may be empty under tight RLS until RPC is used.';
 
 -- 2) Tighten jobs table select: poster, admin, or pitch participant only
 drop policy if exists "Public read open jobs" on public.jobs;

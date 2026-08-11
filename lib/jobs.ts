@@ -49,7 +49,13 @@ export type PostJobInput = {
 export async function fetchOpenJobs(
   supabase: SupabaseClient
 ): Promise<{ jobs: Job[]; error?: string }> {
-  // Prefer privacy view (no poster_whatsapp). Falls back if 00012 not applied.
+  // Prefer RPC (no contact columns; avoids SECURITY DEFINER view advisory).
+  const viaRpc = await supabase.rpc("list_open_jobs_board");
+  if (!viaRpc.error) {
+    return { jobs: (viaRpc.data || []) as Job[] };
+  }
+
+  // Legacy view from 00012 if 00015 not applied yet
   const viaView = await supabase
     .from("open_jobs_board")
     .select(
@@ -61,6 +67,7 @@ export async function fetchOpenJobs(
     return { jobs: (viaView.data || []) as Job[] };
   }
 
+  // Last resort: direct jobs select without contact columns (needs open RLS)
   const { data, error } = await supabase
     .from("jobs")
     .select(
@@ -70,14 +77,10 @@ export async function fetchOpenJobs(
     .order("created_at", { ascending: false });
 
   if (error) {
-    const msg = viaView.error.message || error.message;
-    if (msg.includes("open_jobs_board") || msg.includes("does not exist")) {
-      return {
-        jobs: [],
-        error: `${error.message} — run migrations 00009, 00012, 00013 (jobs board + RLS fix)`,
-      };
-    }
-    return { jobs: [], error: error.message };
+    return {
+      jobs: [],
+      error: `${viaRpc.error.message || error.message} — run migration 00015_open_jobs_function.sql (and 00009/00013)`,
+    };
   }
   return { jobs: (data || []) as Job[] };
 }

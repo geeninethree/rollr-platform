@@ -251,6 +251,12 @@ export default function SupabaseSetupPage() {
               limits
             </li>
             <li>
+              <code className="text-primary">
+                supabase/migrations/00015_open_jobs_function.sql
+              </code>{" "}
+              — public job board as RPC (drops SECURITY DEFINER view)
+            </li>
+            <li>
               <code className="text-primary">.env.local</code> — keys +{" "}
               <code className="text-primary">NEXT_PUBLIC_ADMIN_EMAILS</code> for{" "}
               <Link href="/admin" className="text-primary underline">
