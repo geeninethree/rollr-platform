@@ -166,26 +166,48 @@ export default function AdminPage() {
   }
 
   if (!allowed) {
+    const signedIn = Boolean(email);
     return (
       <div className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center">
         <Shield className="mx-auto h-8 w-8 text-muted-foreground" />
-        <h1 className="text-xl font-semibold">Admin only</h1>
-        <p className="text-sm text-muted-foreground">
-          Sign in as an admin (
-          <code className="text-primary">profiles.is_admin = true</code> on your
-          account).
-          {email ? (
-            <>
-              {" "}
-              Current: <span className="text-foreground">{email}</span>
-            </>
-          ) : (
-            " You are not signed in."
-          )}
-        </p>
+        <h1 className="text-xl font-semibold">
+          {signedIn ? "No admin access" : "Sign in required"}
+        </h1>
+        {signedIn ? (
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              You&apos;re signed in as{" "}
+              <span className="font-medium text-foreground">{email}</span>, but
+              this account isn&apos;t marked as admin.
+            </p>
+            <p>
+              In Supabase → SQL Editor, run once (use your email):
+            </p>
+            <pre className="overflow-x-auto rounded-lg border border-border bg-secondary/50 px-3 py-2 text-left text-[11px] text-foreground">
+              {`update public.profiles
+set is_admin = true
+where email = '${email}';`}
+            </pre>
+            <p className="text-xs">
+              Then refresh this page. Only do this for trusted ops accounts.
+            </p>
+            {error && (
+              <p className="text-xs text-amber-200" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            This page is for ROLLR ops only (waitlist + listing review). Sign in
+            with the account you use for admin, then we&apos;ll check access.
+          </p>
+        )}
         <div className="flex justify-center gap-2">
           <Button asChild>
-            <Link href="/login?next=/admin">Sign in</Link>
+            <Link href="/login?next=/admin">
+              {signedIn ? "Switch account" : "Sign in"}
+            </Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/">Home</Link>
