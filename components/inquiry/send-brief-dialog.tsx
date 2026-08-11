@@ -214,6 +214,8 @@ export function SendBriefDialog({
     }
   }
 
+  const firstName = creator.full_name.split(" ")[0] || "they";
+
   function clearSaved() {
     clearSavedClientBrief();
     setUsingSaved(false);
@@ -228,7 +230,7 @@ export function SendBriefDialog({
 
   const dialog = (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center"
+      className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="send-brief-title"
@@ -239,7 +241,8 @@ export function SendBriefDialog({
         aria-label="Close"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl sm:p-6">
+      <div className="relative z-10 flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-2xl sm:rounded-2xl">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-primary">
@@ -255,7 +258,7 @@ export function SendBriefDialog({
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {submittedId
-                ? `If ${creator.full_name.split(" ")[0] || "they"} can take it, they'll WhatsApp you on the number you shared. You negotiate and pay them directly — 0% to ROLLR.`
+                ? `If ${firstName} can take it, they'll WhatsApp you on the number you shared. You negotiate and pay them directly — 0% to ROLLR.`
                 : "Share what you need and your WhatsApp. They only message you if they accept — no spam, no public phone list."}
             </p>
           </div>
@@ -273,16 +276,25 @@ export function SendBriefDialog({
           <div className="space-y-4 py-2">
             <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 p-4">
               <Lock className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-              <div className="text-sm">
+              <div className="space-y-2 text-sm">
                 <p className="font-medium text-foreground">
                   Waiting for {creator.full_name} to reply
                 </p>
-                <p className="mt-1 text-muted-foreground">
-                  Keep an eye on WhatsApp — that&apos;s where they&apos;ll
-                  reach you if they take the job. Ref{" "}
-                  <span className="font-mono text-xs">{submittedId}</span>.
+                <p className="text-muted-foreground">
+                  <strong className="text-foreground">Watch WhatsApp</strong> —
+                  that&apos;s where they&apos;ll message you if they take the
+                  job.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  They&apos;ll also see this in their ROLLR Inbox (and get an
+                  email if we have Resend set up). No need for you to chase
+                  their public number.
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Ref{" "}
+                  <span className="font-mono">{submittedId}</span>
                   {saveForNext || usingSaved
-                    ? " Your details were saved for the next brief."
+                    ? " · Your details were saved for the next brief."
                     : ""}
                 </p>
               </div>
@@ -518,26 +530,31 @@ export function SendBriefDialog({
               accept.
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button type="submit" className="font-semibold">
+            <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
+              <Button
+                type="submit"
+                className="h-11 w-full font-semibold sm:h-9 sm:w-auto"
+              >
                 Send brief
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                className="h-11 w-full sm:h-9 sm:w-auto"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
               <Badge
                 variant="secondary"
-                className="ml-auto self-center text-[10px]"
+                className="self-start text-[10px] sm:ml-auto sm:self-center"
               >
                 {briefTypeLabel(briefType)}
               </Badge>
             </div>
           </form>
         )}
+        </div>
       </div>
     </div>
   );

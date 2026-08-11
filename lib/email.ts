@@ -2,9 +2,10 @@
  * Transactional email via Resend (optional).
  * Set RESEND_API_KEY + EMAIL_FROM in env. Without keys, notify is no-op (logged).
  *
- * What emails exist today:
- * - New client brief → creator (POST /api/notify/brief)
- * - New waitlist signup → admin allowlist (POST /api/notify/waitlist)
+ * What emails exist today (Resend required):
+ * - New client brief → creator (+ optional admin BCC copy)
+ * - Listing published / rejected → creator (POST /api/notify/listing)
+ * - New waitlist signup → admin allowlist
  * Waitlist users do NOT get auto-confirm emails (alpha — review in /admin).
  */
 
@@ -182,6 +183,81 @@ export function waitlistAdminEmail(input: {
     </div>
   `;
 
+  return { subject, html, text };
+}
+
+export function listingStatusEmail(input: {
+  creatorName: string;
+  status: "published" | "rejected" | "draft";
+  profileUrl?: string;
+  studioUrl: string;
+}) {
+  if (input.status === "published") {
+    const subject = "You're live on ROLLR 🎉";
+    const text = [
+      `Hi ${input.creatorName},`,
+      ``,
+      `Your portfolio was approved and is now live on ROLLR.`,
+      input.profileUrl ? `Profile: ${input.profileUrl}` : null,
+      `Update anytime: ${input.studioUrl}`,
+      ``,
+      `Clients can send you briefs from your profile. Check Inbox regularly — and WhatsApp them after you accept.`,
+      ``,
+      `— ROLLR`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const html = `
+      <div style="font-family:system-ui,sans-serif;max-width:520px;line-height:1.5;color:#18181b">
+        <p>Hi ${escapeHtml(input.creatorName)},</p>
+        <p>Your portfolio was <strong>approved</strong> and is live on ROLLR.</p>
+        ${
+          input.profileUrl
+            ? `<p><a href="${escapeHtml(input.profileUrl)}" style="color:#a16207">View your public profile →</a></p>`
+            : ""
+        }
+        <p>
+          <a href="${escapeHtml(input.studioUrl)}"
+             style="display:inline-block;background:#eab308;color:#09090b;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">
+            Open portfolio editor
+          </a>
+        </p>
+        <p style="font-size:13px;color:#52525b">
+          Clients send briefs from your profile. Accept in Inbox, then WhatsApp them.
+        </p>
+      </div>
+    `;
+    return { subject, html, text };
+  }
+
+  if (input.status === "rejected") {
+    const subject = "ROLLR listing needs changes";
+    const text = [
+      `Hi ${input.creatorName},`,
+      ``,
+      `Your listing wasn't published yet. Please update portfolio quality (photos, bio, areas, prices) and submit again:`,
+      input.studioUrl,
+      ``,
+      `— ROLLR`,
+    ].join("\n");
+    const html = `
+      <div style="font-family:system-ui,sans-serif;max-width:520px;line-height:1.5;color:#18181b">
+        <p>Hi ${escapeHtml(input.creatorName)},</p>
+        <p>Your listing wasn't published yet. Please strengthen portfolio, bio, areas, and package prices, then submit again.</p>
+        <p>
+          <a href="${escapeHtml(input.studioUrl)}"
+             style="display:inline-block;background:#eab308;color:#09090b;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">
+            Edit portfolio
+          </a>
+        </p>
+      </div>
+    `;
+    return { subject, html, text };
+  }
+
+  const subject = "ROLLR listing set to draft";
+  const text = `Hi ${input.creatorName},\n\nYour listing is back in draft. Edit and resubmit: ${input.studioUrl}\n\n— ROLLR`;
+  const html = `<p>Hi ${escapeHtml(input.creatorName)},</p><p>Your listing is in draft. <a href="${escapeHtml(input.studioUrl)}">Edit portfolio</a>.</p>`;
   return { subject, html, text };
 }
 

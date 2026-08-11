@@ -315,22 +315,23 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                 </ul>
               )}
 
-              <SendBriefButton
-                creator={creator}
-                surface={tab}
-                defaultBriefType={defaultBriefType}
-                size="lg"
-                className="mt-4 w-full"
-                label="Send brief"
-              />
-
-              <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                <p>
-                  Send a brief with your WhatsApp. If they&apos;re free,{" "}
-                  <strong className="text-foreground">they message you</strong>{" "}
-                  — no public phone hunt.
-                </p>
+              <div className="mt-4 hidden lg:block">
+                <SendBriefButton
+                  creator={creator}
+                  surface={tab}
+                  defaultBriefType={defaultBriefType}
+                  size="lg"
+                  className="w-full"
+                  label="Send brief"
+                />
+                <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  <p>
+                    Send a brief with your WhatsApp. If they&apos;re free,{" "}
+                    <strong className="text-foreground">they message you</strong>{" "}
+                    — no public phone hunt.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -355,6 +356,19 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
           </aside>
         </div>
       </div>
+
+      {/* Mobile sticky hire CTA — desktop uses sidebar button */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
+        <SendBriefButton
+          creator={creator}
+          surface={tab}
+          defaultBriefType={defaultBriefType}
+          size="lg"
+          className="h-12 w-full font-semibold"
+          label="Send brief"
+        />
+      </div>
+      <div className="h-20 lg:hidden" aria-hidden />
     </div>
   );
 }

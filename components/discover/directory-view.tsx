@@ -100,19 +100,25 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
           )}
 
           {!loading && creators.length === 0 && !error ? (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-20 text-center">
-              <p className="text-lg font-medium text-white">
-                No published creators yet
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-14 text-center sm:px-6 sm:py-20">
+              <p className="text-base font-medium text-white sm:text-lg">
+                Creators onboarding
               </p>
-              <p className="mx-auto mt-2 max-w-sm text-sm text-white/45">
-                Be the first. Sign up, build your portfolio, and submit for
-                review.
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/45">
+                Alpha: we manually review every portfolio before it goes live.
+                Photographers &amp; editors — list free for now, we&apos;ll
+                publish when you look solid.
               </p>
-              <Button asChild className="mt-6 font-semibold">
-                <Link href="/signup?role=creator&next=/studio">
-                  List on ROLLR · ₹299/mo
-                </Link>
-              </Button>
+              <div className="mt-6 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+                <Button asChild className="w-full font-semibold sm:w-auto">
+                  <Link href="/signup?role=creator&next=/studio">
+                    List as creator
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link href="/list">Pricing &amp; interest</Link>
+                </Button>
+              </div>
             </div>
           ) : (
             <CreatorGrid

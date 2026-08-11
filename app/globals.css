@@ -82,6 +82,8 @@
     /* Hard stop horizontal bleed from media / grid min-content */
     overflow-x: hidden;
     max-width: 100%;
+    /* Avoid iOS horizontal rubber-band revealing white */
+    -webkit-text-size-adjust: 100%;
   }
 
   body {

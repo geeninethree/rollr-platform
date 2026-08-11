@@ -134,7 +134,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 pt-3 sm:pt-4">
       {/* Floating capsule — same max width as page content */}
       <div className="page-shell">
-      <div className="flex h-14 w-full items-center justify-between gap-3 rounded-full border border-white/[0.08] bg-black/75 px-3 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:h-14 sm:px-5">
+      <div className="flex h-12 w-full items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-black/75 px-2.5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:h-14 sm:gap-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-3 sm:gap-5">
           <Logo size="sm" />
 

@@ -70,15 +70,19 @@ export default function CreatorGuidePage() {
       <ul>
         <li>Clients open your profile and send a brief with their WhatsApp</li>
         <li>
-          You open{" "}
+          You get an email when Resend is configured — always check{" "}
           <Link href="/inbox" className="text-primary">
             Inbox
           </Link>{" "}
-          (signed in) → Accept → WhatsApp opens to the client
+          while signed in
         </li>
+        <li>Accept → WhatsApp opens to the client</li>
         <li>
           Your phone number is never shown on your public profile — you choose
           when to reach out
+        </li>
+        <li>
+          When we publish your listing, we email you (if notifications are on)
         </li>
       </ul>
 

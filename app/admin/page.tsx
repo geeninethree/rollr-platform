@@ -149,11 +149,32 @@ export default function AdminPage() {
     if (!supabase) return;
     setBusyId(id);
     const result = await setListingStatus(supabase, id, status);
-    setBusyId(null);
     if (result.error) {
+      setBusyId(null);
       setError(result.error);
       return;
     }
+    // Email creator (Resend if configured)
+    try {
+      const res = await fetch("/api/notify/listing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listing_id: id, status }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        skipped?: boolean;
+        error?: string;
+      };
+      if (json.error && !json.skipped) {
+        setError(
+          `Listing ${status}. Email notify: ${json.error} (set RESEND_API_KEY to email creators)`
+        );
+      }
+    } catch {
+      /* non-blocking */
+    }
+    setBusyId(null);
     setListings((prev) => prev.filter((l) => l.id !== id));
   }
 

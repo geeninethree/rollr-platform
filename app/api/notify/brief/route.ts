@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { briefNotifyEmail, sendEmail } from "@/lib/email";
+import {
+  briefNotifyEmail,
+  getNotifyAdminEmails,
+  sendEmail,
+} from "@/lib/email";
 
 type NotifyBody = {
   creator_id: string;
@@ -75,6 +79,28 @@ export async function POST(req: Request) {
       html: mail.html,
       text: mail.text,
     });
+
+    // Ops backup: if Resend works, also ping admin so you can nudge creators who miss inbox
+    const admins = getNotifyAdminEmails().filter(
+      (a) => a.toLowerCase() !== to.toLowerCase()
+    );
+    if (admins.length > 0 && !result.skipped) {
+      void sendEmail({
+        to: admins,
+        subject: `[ROLLR] Brief for ${body.creator_name}: ${body.client_name}`,
+        text: [
+          `New brief on ROLLR`,
+          `Creator: ${body.creator_name} (${to})`,
+          `Client: ${body.client_name}`,
+          `${body.category || "Brief"} · ${body.location || "Mumbai"}`,
+          ``,
+          body.message,
+          ``,
+          `Creator inbox: ${site}/inbox`,
+        ].join("\n"),
+        html: `<p>New brief for <strong>${body.creator_name}</strong> (${to}).</p><p>Client: ${body.client_name}</p><p>${body.message}</p><p><a href="${site}/inbox">Creator inbox</a></p>`,
+      });
+    }
 
     return NextResponse.json(result);
   } catch (e) {

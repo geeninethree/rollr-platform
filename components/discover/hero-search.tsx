@@ -151,7 +151,7 @@ export function HeroSearch({
             This is the only reliable way to stop full-page stretch glitches.
           */}
           <div
-            className="media-frame relative h-[220px] w-full max-h-[42vh] min-h-[180px] sm:h-[300px] sm:max-h-[46vh] lg:h-[400px] lg:max-h-none"
+            className="media-frame relative h-[180px] w-full max-h-[36vh] min-h-[160px] sm:h-[300px] sm:max-h-[46vh] lg:h-[400px] lg:max-h-none"
             role="img"
             aria-label={isEdit ? "Editor workspace" : "Photography"}
             style={{
@@ -176,16 +176,16 @@ export function HeroSearch({
             </span>
           </div>
 
-          <div className="flex min-w-0 flex-col justify-center gap-6 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-[400px] lg:px-10">
-            <div className="space-y-3">
+          <div className="flex min-w-0 flex-col justify-center gap-4 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10 lg:min-h-[400px] lg:px-10">
+            <div className="space-y-2.5 sm:space-y-3">
               <div
-                className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
+                className="inline-flex max-w-full rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
                 role="tablist"
               >
                 <Link
                   href="/"
                   className={cn(
-                    "rounded-full px-3.5 py-1.5 transition-colors",
+                    "rounded-full px-3 py-2 transition-colors sm:px-3.5 sm:py-1.5",
                     !isEdit
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -196,7 +196,7 @@ export function HeroSearch({
                 <Link
                   href="/editors"
                   className={cn(
-                    "rounded-full px-3.5 py-1.5 transition-colors",
+                    "rounded-full px-3 py-2 transition-colors sm:px-3.5 sm:py-1.5",
                     isEdit
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -206,13 +206,13 @@ export function HeroSearch({
                 </Link>
               </div>
 
-              <h1 className="text-balance text-[2rem] font-semibold leading-[1.08] tracking-tight text-white sm:text-[2.5rem] lg:text-[2.75rem]">
+              <h1 className="text-balance text-[1.65rem] font-semibold leading-[1.1] tracking-tight text-white sm:text-[2.5rem] lg:text-[2.75rem]">
                 {isEdit ? "Find an editor" : "Find a photographer"}
               </h1>
-              <p className="text-[15px] text-white/50">
+              <p className="text-sm text-white/50 sm:text-[15px]">
                 Mumbai · 0% commission
               </p>
-              <p className="text-sm text-white/40">
+              <p className="text-xs text-white/40 sm:text-sm">
                 {resultCount} available · send a brief from any profile
               </p>
             </div>
@@ -249,8 +249,8 @@ export function HeroSearch({
                       setSuggestOpen(false);
                     }
                   }}
-                  placeholder="Search name, style, or area (e.g. Bandra)"
-                  className="h-12 rounded-full border-white/[0.08] bg-white/[0.04] pl-11 pr-12 text-[15px] text-white placeholder:text-white/30 focus-visible:ring-primary/40"
+                  placeholder="Name, style, or area (e.g. Bandra)"
+                  className="h-11 rounded-full border-white/[0.08] bg-white/[0.04] pl-11 pr-12 text-base text-white placeholder:text-white/30 focus-visible:ring-primary/40 sm:h-12 sm:text-[15px]"
                   autoComplete="off"
                   role="combobox"
                   aria-expanded={suggestOpen}

@@ -60,6 +60,10 @@ export default function ClientGuidePage() {
           If they take the job, <strong>they message you</strong> on WhatsApp
           (using the number you put in the brief)
         </li>
+        <li>
+          They see the brief in their ROLLR Inbox (and get an email when we have
+          notifications enabled)
+        </li>
         <li>Agree scope, timing, and payment with them directly</li>
         <li>ROLLR does not take a cut of what you pay the creator</li>
       </ul>

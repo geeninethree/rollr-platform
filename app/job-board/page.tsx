@@ -271,13 +271,15 @@ export default function JobBoardPage() {
 
   return (
     <div className="bg-grid-fade">
-      <div className="page-shell space-y-8 py-8 sm:py-12">
+      <div className="page-shell space-y-6 py-6 sm:space-y-8 sm:py-12">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
               Open calls
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight">Job board</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Job board
+            </h1>
             <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
               Post a shoot or edit job. Creators pitch; you accept;{" "}
               <strong className="text-foreground">they</strong> WhatsApp you
@@ -286,15 +288,15 @@ export default function JobBoardPage() {
               Multiple open jobs → Recruiter · ₹399/mo.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             {!userId ? (
-              <Button asChild className="font-semibold">
+              <Button asChild className="h-11 w-full font-semibold sm:h-9 sm:w-auto">
                 <Link href="/signup?next=/job-board">Sign up to post a job</Link>
               </Button>
             ) : (
               <Button
                 type="button"
-                className="font-semibold"
+                className="h-11 w-full font-semibold sm:h-9 sm:w-auto"
                 disabled={Boolean(gateMsg) && !isRecruiter}
                 onClick={() => setShowPost((v) => !v)}
               >
@@ -302,7 +304,7 @@ export default function JobBoardPage() {
                 {showPost ? "Cancel" : "Post a job"}
               </Button>
             )}
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="h-11 w-full sm:h-9 sm:w-auto">
               <Link href="/">Browse creators</Link>
             </Button>
           </div>
