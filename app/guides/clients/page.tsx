@@ -4,45 +4,93 @@ import { Button } from "@/components/ui/button";
 
 export const metadata = {
   title: "Client guide",
-  description: "How to find a photographer or editor on ROLLR.",
+  description:
+    "How to find and hire a Mumbai photographer or editor on ROLLR.",
 };
 
 export default function ClientGuidePage() {
   return (
-    <LegalShell title="Client guide" updated="9 August 2026">
-      <p>How to hire on ROLLR without the creator&apos;s number being public.</p>
+    <LegalShell title="Client guide" updated="11 August 2026">
+      <p>
+        You&apos;re hiring. ROLLR is a Mumbai directory of photographers,
+        videographers, and editors — browse profiles, send a short brief, and
+        talk to them on WhatsApp when they&apos;re free for your job.{" "}
+        <strong>0% commission</strong> on the booking.
+      </p>
 
-      <h2>1. Browse</h2>
+      <h2>1. Find someone</h2>
       <ul>
         <li>
-          <Link href="/">Photographers</Link> or{" "}
-          <Link href="/editors">Editors</Link>
+          Browse{" "}
+          <Link href="/" className="text-primary">
+            Photographers
+          </Link>{" "}
+          or{" "}
+          <Link href="/editors" className="text-primary">
+            Editors
+          </Link>
         </li>
-        <li>Filter by area, category, date</li>
-        <li>Open a profile and review portfolio + package floors</li>
+        <li>Filter by neighbourhood, category, or search</li>
+        <li>
+          Open a profile — portfolio, areas, and package floors (from prices)
+        </li>
       </ul>
 
       <h2>2. Send a brief</h2>
       <ul>
         <li>
-          Tap <strong>Send brief</strong> — not a public phone number
+          On their profile, tap <strong>Send brief</strong>
         </li>
-        <li>Include your name, WhatsApp, date, location, budget, message</li>
-        <li>Optional: save your details for the next creator</li>
+        <li>
+          Tell them what you need: your name, WhatsApp, date, area, budget, and
+          a short note
+        </li>
+        <li>
+          You can save your details on this device for the next brief
+        </li>
+        <li>
+          You&apos;re not hunting public phone numbers — you leave a clear
+          request and they reply if it&apos;s a fit
+        </li>
       </ul>
 
-      <h2>3. They accept → WhatsApp</h2>
+      <h2>3. Wait for their reply on WhatsApp</h2>
       <ul>
-        <li>If they accept, they message you on WhatsApp</li>
-        <li>Negotiate scope and pay them directly</li>
-        <li>ROLLR takes 0% of the job</li>
+        <li>
+          If they take the job, <strong>they message you</strong> on WhatsApp
+          (using the number you put in the brief)
+        </li>
+        <li>Agree scope, timing, and payment with them directly</li>
+        <li>ROLLR does not take a cut of what you pay the creator</li>
       </ul>
 
-      <h2>4. Post to job board?</h2>
-      <p>
-        Public job posts are not live yet. Use profile briefs for now. The Job
-        Board page will open for open calls later.
-      </p>
+      <h2>4. Or post an open job</h2>
+      <ul>
+        <li>
+          Prefer many people to apply? Use the{" "}
+          <Link href="/job-board" className="text-primary">
+            Job board
+          </Link>
+        </li>
+        <li>
+          Sign up (free), post one open job at a time — creators pitch, you
+          accept, then they WhatsApp you
+        </li>
+        <li>
+          Agencies posting lots of open roles can join the recruiter waitlist
+          on the same page (multi-job plan later)
+        </li>
+      </ul>
+
+      <h2>Tips</h2>
+      <ul>
+        <li>Be specific on date, location, and budget — better replies</li>
+        <li>Check portfolio work and package floors before briefing</li>
+        <li>
+          Payment is between you and the creator (UPI, bank, cash — whatever you
+          agree)
+        </li>
+      </ul>
 
       <div className="not-prose mt-6 flex flex-wrap gap-2">
         <Button asChild className="font-semibold">
@@ -50,6 +98,9 @@ export default function ClientGuidePage() {
         </Button>
         <Button asChild variant="outline">
           <Link href="/editors">Find an editor</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/job-board">Job board</Link>
         </Button>
       </div>
     </LegalShell>

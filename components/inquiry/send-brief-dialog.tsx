@@ -243,7 +243,7 @@ export function SendBriefDialog({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-primary">
-              Protected contact
+              Hire on ROLLR
             </p>
             <h2
               id="send-brief-title"
@@ -255,8 +255,8 @@ export function SendBriefDialog({
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {submittedId
-                ? "Their number stays private until they accept. They'll WhatsApp you after accepting. If email is configured, they also get a notification."
-                : "Creator numbers stay private. They message you on WhatsApp only after accepting this brief."}
+                ? `If ${creator.full_name.split(" ")[0] || "they"} can take it, they'll WhatsApp you on the number you shared. You negotiate and pay them directly — 0% to ROLLR.`
+                : "Share what you need and your WhatsApp. They only message you if they accept — no spam, no public phone list."}
             </p>
           </div>
           <button
@@ -275,10 +275,11 @@ export function SendBriefDialog({
               <Lock className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div className="text-sm">
                 <p className="font-medium text-foreground">
-                  Waiting for {creator.full_name} to accept
+                  Waiting for {creator.full_name} to reply
                 </p>
                 <p className="mt-1 text-muted-foreground">
-                  Reference{" "}
+                  Keep an eye on WhatsApp — that&apos;s where they&apos;ll
+                  reach you if they take the job. Ref{" "}
                   <span className="font-mono text-xs">{submittedId}</span>.
                   {saveForNext || usingSaved
                     ? " Your details were saved for the next brief."

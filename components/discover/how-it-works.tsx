@@ -2,15 +2,39 @@ import Link from "next/link";
 import { CheckCircle2, FileText, MessageCircle, Sparkles } from "lucide-react";
 
 const clientSteps = [
-  { icon: FileText, title: "Browse & open a profile", body: "Filter by area and category." },
-  { icon: CheckCircle2, title: "Send a brief", body: "They accept if it’s a fit." },
-  { icon: MessageCircle, title: "They WhatsApp you", body: "Book direct. 0% fee." },
+  {
+    icon: FileText,
+    title: "Browse profiles",
+    body: "Filter by area and category — see portfolio & floors.",
+  },
+  {
+    icon: CheckCircle2,
+    title: "Send a brief",
+    body: "Your WhatsApp + what you need. No public phone hunt.",
+  },
+  {
+    icon: MessageCircle,
+    title: "They message you",
+    body: "If it’s a fit, they WhatsApp you. Book direct — 0% fee.",
+  },
 ];
 
 const creatorSteps = [
-  { icon: Sparkles, title: "Build portfolio + list ₹299", body: "Works on ROLLR + optional links." },
-  { icon: FileText, title: "Get qualified briefs", body: "Review before sharing contact." },
-  { icon: MessageCircle, title: "You message the client", body: "Keep 100% of the job." },
+  {
+    icon: Sparkles,
+    title: "Build portfolio + list ₹299",
+    body: "Works on ROLLR + optional links.",
+  },
+  {
+    icon: FileText,
+    title: "Get client briefs",
+    body: "Review each request before you reply.",
+  },
+  {
+    icon: MessageCircle,
+    title: "You WhatsApp the client",
+    body: "Keep 100% of the job. Your number stays off the profile.",
+  },
 ];
 
 export function HowItWorks() {
