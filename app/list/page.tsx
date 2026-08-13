@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   BadgeCheck,
+  Briefcase,
   Check,
   CheckCircle2,
   Clapperboard,
@@ -24,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BUSINESS_KIT_BULLETS, BUSINESS_KIT_TOOLS } from "@/lib/business-kit";
 import { cn } from "@/lib/utils";
 
 const included = [
@@ -36,6 +38,11 @@ const included = [
     icon: Sparkles,
     title: "Unlimited client briefs",
     body: "No lead caps. Accept as many qualified requests as you can handle.",
+  },
+  {
+    icon: Briefcase,
+    title: "Business kit included",
+    body: "Quotes, booking confirmations, invoices, rate cards, delivery notes, client folder & GST summary.",
   },
   {
     icon: LayoutGrid,
@@ -65,6 +72,11 @@ const comparison = [
   { feature: "Client briefs", rollr: "Unlimited", typical: "Often capped or pay-per-lead" },
   { feature: "Contact control", rollr: "You accept first", typical: "Number often public" },
   { feature: "Shoot + edit listing", rollr: "Same profile", typical: "Separate or messy" },
+  {
+    feature: "Quotes / invoices / delivery",
+    rollr: "Built-in kit",
+    typical: "DIY docs / none",
+  },
 ];
 
 export default function ListProfilePage() {
@@ -197,6 +209,61 @@ export default function ListProfilePage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Business kit — pre-signup clarity */}
+      <section id="business-kit" className="border-t border-border/60 bg-card/20">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-xl">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary">
+                After the brief
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                Business kit — not just a directory
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Leads are half the job. ROLLR also covers quote → book → invoice
+                → deliver so the work doesn&apos;t die in WhatsApp. You remain the
+                seller; we never collect payment.
+              </p>
+            </div>
+            <Button asChild variant="outline" className="font-semibold">
+              <Link href="/tools">Preview the kit →</Link>
+            </Button>
+          </div>
+          <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {BUSINESS_KIT_TOOLS.filter((t) => t.href !== "/inbox").map((t) => (
+              <li
+                key={t.href}
+                className="rounded-xl border border-border bg-card/80 p-4"
+              >
+                <p className="text-sm font-semibold">{t.title}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  {t.pitch}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <ul className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+            {BUSINESS_KIT_BULLETS.map((line) => (
+              <li key={line} className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                {line}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-wrap gap-2">
+            <Button asChild className="font-semibold">
+              <Link href="/signup?role=creator&next=/tools">
+                Sign up free · unlock kit
+              </Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/guides/creators">Creator guide</Link>
+            </Button>
+          </div>
+        </div>
       </section>
 
       {/* Portfolio & vetting */}

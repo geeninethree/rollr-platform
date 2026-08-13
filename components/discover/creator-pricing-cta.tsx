@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, MessageSquare, Percent, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  MessageSquare,
+  Percent,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +38,8 @@ export function CreatorPricingCta({
               <span className="text-gold">₹299/mo</span>
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              Get in front of Mumbai clients. Keep every rupee you invoice.
+              Leads + business kit (quotes, invoices, rate cards). Keep every
+              rupee.
             </p>
           </div>
           <ul className="space-y-1.5 text-[11px] text-muted-foreground">
@@ -45,20 +52,32 @@ export function CreatorPricingCta({
               Unlimited client briefs
             </li>
             <li className="inline-flex w-full items-center gap-1.5">
+              <Briefcase className="h-3 w-3 shrink-0 text-primary" />
+              Quotes · invoices · delivery kit
+            </li>
+            <li className="inline-flex w-full items-center gap-1.5">
               <Sparkles className="h-3 w-3 shrink-0 text-primary" />
               Shoot + edit on one profile
             </li>
           </ul>
-          <Button
-            asChild
-            size="sm"
-            className="w-full font-semibold shadow-sm shadow-primary/20"
-          >
-            <Link href="/list">
-              See full plan
-              <ArrowRight className="h-3.5 w-3.5" />
+          <div className="flex flex-col gap-1.5">
+            <Button
+              asChild
+              size="sm"
+              className="w-full font-semibold shadow-sm shadow-primary/20"
+            >
+              <Link href="/list">
+                See full plan
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+            <Link
+              href="/tools"
+              className="text-center text-[11px] font-medium text-primary hover:underline"
+            >
+              Preview business kit →
             </Link>
-          </Button>
+          </div>
         </div>
       </aside>
     );

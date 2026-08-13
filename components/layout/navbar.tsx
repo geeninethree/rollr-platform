@@ -29,13 +29,26 @@ const publicLinks = [
 const creatorLinks = [
   { href: "/list", label: "List free (alpha)", desc: "Pricing · ₹299/mo later" },
   { href: "/studio", label: "Portfolio", desc: "Build your listing" },
+  {
+    href: "/tools",
+    label: "Business kit",
+    desc: "Quotes · invoices · rate cards · more (preview free)",
+  },
+  { href: "/list#business-kit", label: "What’s in the kit", desc: "See tools before signup" },
+  { href: "/guides/creators", label: "Creator guide", desc: "List · briefs · after the job" },
+];
+
+const creatorLinksSignedIn = [
+  { href: "/studio", label: "Portfolio", desc: "Build your listing" },
   { href: "/tools", label: "Business kit", desc: "Quotes · invoices · more" },
   { href: "/invoices", label: "Invoices", desc: "Bill clients" },
   { href: "/clients", label: "Clients", desc: "Per-client history" },
+  { href: "/earnings", label: "Earnings / GST", desc: "Year summary + CSV" },
 ];
 
 const clientLinks = [
   { href: "/my-briefs", label: "My briefs", desc: "What you sent" },
+  { href: "/guides/clients", label: "Client guide", desc: "How hiring works" },
 ];
 
 export function Navbar() {
@@ -232,27 +245,31 @@ export function Navbar() {
               {creatorsOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/50 backdrop-blur-xl animate-rise"
+                  className="absolute left-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/50 backdrop-blur-xl animate-rise"
                 >
-                  {creatorLinks.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      role="menuitem"
-                      className={cn(
-                        "flex flex-col px-3 py-2.5 transition-colors hover:bg-white/[0.06]",
-                        pathname.startsWith(item.href) && "bg-white/[0.06]"
-                      )}
-                      onClick={() => setCreatorsOpen(false)}
-                    >
-                      <span className="text-sm font-medium text-white">
-                        {item.label}
-                      </span>
-                      <span className="text-[11px] text-white/40">
-                        {item.desc}
-                      </span>
-                    </Link>
-                  ))}
+                  {(user && isCreator ? creatorLinksSignedIn : creatorLinks).map(
+                    (item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        role="menuitem"
+                        className={cn(
+                          "flex flex-col px-3 py-2.5 transition-colors hover:bg-white/[0.06]",
+                          (pathname.startsWith(item.href.split("#")[0]) ||
+                            pathname === item.href) &&
+                            "bg-white/[0.06]"
+                        )}
+                        onClick={() => setCreatorsOpen(false)}
+                      >
+                        <span className="text-sm font-medium text-white">
+                          {item.label}
+                        </span>
+                        <span className="text-[11px] text-white/40">
+                          {item.desc}
+                        </span>
+                      </Link>
+                    )
+                  )}
                   {user && (
                     <>
                       <div className="my-1 border-t border-white/[0.06]" />
@@ -377,15 +394,17 @@ export function Navbar() {
               <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-white/30">
                 For creators
               </p>
-              {creatorLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="block rounded-full px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {(user && isCreator ? creatorLinksSignedIn : creatorLinks).map(
+                (item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="block rounded-full px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
               {user &&
                 clientLinks.map((item) => (
                   <Link

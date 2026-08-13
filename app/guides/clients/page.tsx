@@ -64,7 +64,17 @@ export default function ClientGuidePage() {
           They see the brief in their ROLLR Inbox (and get an email when we have
           notifications enabled)
         </li>
+        <li>
+          Signed in? Track what you sent under{" "}
+          <Link href="/my-briefs" className="text-primary">
+            My briefs
+          </Link>
+        </li>
         <li>Agree scope, timing, and payment with them directly</li>
+        <li>
+          Creators may send a quote, booking confirmation, or invoice via ROLLR
+          (share links) — you still pay them directly, not ROLLR
+        </li>
         <li>ROLLR does not take a cut of what you pay the creator</li>
       </ul>
 

@@ -1,21 +1,23 @@
 import Link from "next/link";
 import { LegalShell } from "@/components/legal/legal-shell";
 import { Button } from "@/components/ui/button";
+import { BUSINESS_KIT_BULLETS } from "@/lib/business-kit";
 
 export const metadata = {
   title: "Creator guide",
   description:
-    "How to list as a photographer or editor on ROLLR and get briefs.",
+    "How to list as a photographer or editor on ROLLR, get briefs, and use invoices, quotes, and the business kit.",
 };
 
 export default function CreatorGuidePage() {
   return (
-    <LegalShell title="Creator guide" updated="11 August 2026">
+    <LegalShell title="Creator guide" updated="13 August 2026">
       <p>
         You&apos;re a photographer, videographer, or editor. This is how you
-        get a live profile on ROLLR, receive client briefs, and keep 100% of
-        what you charge — membership is <strong>₹299/mo</strong> when billing
-        is live (alpha: list via portfolio; no payment taken yet).
+        get a live profile on ROLLR, receive client briefs, run the job with
+        built-in tools, and keep 100% of what you charge — membership is{" "}
+        <strong>₹299/mo</strong> when billing is live (alpha: list via
+        portfolio; no payment taken yet).
       </p>
 
       <h2>1. Join (pick a path)</h2>
@@ -74,7 +76,7 @@ export default function CreatorGuidePage() {
           <Link href="/inbox" className="text-primary">
             Inbox
           </Link>{" "}
-          while signed in
+          while signed in (top of the nav for creators)
         </li>
         <li>Accept → WhatsApp opens to the client</li>
         <li>
@@ -100,6 +102,40 @@ export default function CreatorGuidePage() {
         </li>
       </ul>
 
+      <h2>5. After the job — business kit</h2>
+      <p>
+        Directory + WhatsApp is only half the work. Signed-in creators get a{" "}
+        <Link href="/tools" className="text-primary">
+          Business kit
+        </Link>{" "}
+        (previewable before signup) so quote → book → invoice → deliver stays
+        organised. <strong>You are always the seller</strong> — ROLLR does not
+        collect payment or take a cut.
+      </p>
+      <ul>
+        {BUSINESS_KIT_BULLETS.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+      <p>
+        From an accepted brief in Inbox you can jump to{" "}
+        <strong>Quote</strong>, <strong>Booking</strong>,{" "}
+        <strong>Invoice</strong>, or <strong>Delivery</strong> with client
+        details prefilled. Payment reminders open WhatsApp to the client with
+        the invoice link.
+      </p>
+      <p>
+        Preview without an account:{" "}
+        <Link href="/tools" className="text-primary">
+          /tools
+        </Link>
+        . Full plan copy:{" "}
+        <Link href="/list#business-kit" className="text-primary">
+          /list#business-kit
+        </Link>
+        .
+      </p>
+
       <h2>Share your profile</h2>
       <p>
         After you&apos;re published, copy your profile URL from Portfolio (share
@@ -111,6 +147,9 @@ export default function CreatorGuidePage() {
           <Link href="/signup?role=creator&next=/studio">
             Sign up as creator
           </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/tools">Preview business kit</Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/list">Pricing &amp; waitlist</Link>

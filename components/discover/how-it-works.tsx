@@ -22,11 +22,15 @@ const creatorSteps = [
   },
   {
     title: "Get briefs",
-    body: "Review each request before you reply.",
+    body: "Review each request in Inbox before you reply.",
   },
   {
     title: "You message the client",
     body: "Keep 100% of the job. Your number stays private.",
+  },
+  {
+    title: "Quote · invoice · deliver",
+    body: "Business kit: estimates, bookings, invoices, rate cards, delivery notes.",
   },
 ];
 
@@ -81,6 +85,12 @@ export function HowItWorks() {
             </li>
           ))}
         </ol>
+        <Link
+          href="/tools"
+          className="mt-5 inline-block text-xs font-medium text-primary transition-colors hover:underline"
+        >
+          Preview business kit (no signup required) →
+        </Link>
       </div>
     </section>
   );
