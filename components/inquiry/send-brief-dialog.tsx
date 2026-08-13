@@ -124,6 +124,20 @@ export function SendBriefDialog({
     );
   }, [open, creator, defaultBriefType, presetEventDate, surface]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onOpenChange, submitting]);
+
   if (!open || !mounted) return null;
 
   const categoryOptions =
@@ -230,20 +244,6 @@ export function SendBriefDialog({
     setEventDate(presetEventDate ?? "");
     setSaveForNext(true);
   }
-
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !submitting) onOpenChange(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open, onOpenChange, submitting]);
 
   const dialog = (
     <div

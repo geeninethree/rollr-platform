@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   // Build success redirect first; attach auth cookies onto this same response
   const success = new URL(`${base}${next}`);
   success.searchParams.set("verified", "1");
-  let response = NextResponse.redirect(success.toString());
+  const response = NextResponse.redirect(success.toString());
 
   const supabase = createServerClient(url, anonKey, {
     cookies: {
