@@ -1,9 +1,29 @@
 /**
- * Category-based package pricing (not hourly).
+ * Creator pricing: named packages (primary) + optional category floors (legacy/derived).
  * Guides are soft hints for Mumbai event work — creators set their own numbers.
  */
 
 export type CategoryPrices = Record<string, number>;
+
+/** Shoot coverage vs edit/post vs both (for hybrid creators). */
+export type PackageMode = "shoot" | "edit" | "both";
+
+/** A sellable package on the listing (custom names allowed). */
+export type PricingPackage = {
+  id: string;
+  /** e.g. "Wedding full day", "Corporate half day", "3 reels" */
+  name: string;
+  /** What's included */
+  description?: string;
+  /** INR package floor; 0 = on request */
+  price: number;
+  /** e.g. "Starting", "Full day", "Per reel" */
+  unit?: string;
+  /** Optional link to a directory category for filters */
+  category?: string;
+  /** Default shoot — use edit for post packages */
+  mode?: PackageMode;
+};
 
 export type PriceGuide = {
   /** What the number means */
@@ -13,6 +33,174 @@ export type PriceGuide = {
   /** Prefill when creator first picks the category */
   suggested: number;
 };
+
+export function newPricingPackage(
+  partial?: Partial<PricingPackage>
+): PricingPackage {
+  const mode: PackageMode =
+    partial?.mode === "edit" || partial?.mode === "both"
+      ? partial.mode
+      : "shoot";
+  return {
+    id: partial?.id || `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name: partial?.name ?? "",
+    description: partial?.description ?? "",
+    price: Math.max(0, Math.round(Number(partial?.price) || 0)),
+    unit: partial?.unit ?? "Starting package",
+    category: partial?.category || undefined,
+    mode,
+  };
+}
+
+export function minPackagePrice(
+  packages: PricingPackage[] | undefined | null,
+  mode?: PackageMode | "any"
+): number {
+  if (!packages?.length) return 0;
+  const list =
+    !mode || mode === "any"
+      ? packages
+      : packages.filter((p) => packageMatchesMode(p, mode));
+  const vals = list
+    .map((p) => Number(p.price) || 0)
+    .filter((n) => n > 0);
+  return vals.length ? Math.min(...vals) : 0;
+}
+
+export function packageMatchesMode(
+  pkg: PricingPackage,
+  mode: PackageMode | "shoot" | "edit"
+): boolean {
+  const m = pkg.mode || "shoot";
+  if (mode === "shoot") return m === "shoot" || m === "both";
+  if (mode === "edit") return m === "edit" || m === "both";
+  return true;
+}
+
+export function packagesForMode(
+  packages: PricingPackage[] | undefined | null,
+  mode: PackageMode | "shoot" | "edit"
+): PricingPackage[] {
+  return (packages || []).filter((p) => packageMatchesMode(p, mode));
+}
+
+/** Rate card / quote line shape from listing packages. */
+export function packagesToRateCardPackages(
+  packages: PricingPackage[]
+): { name: string; description: string; price: number; unit?: string }[] {
+  return packages
+    .filter((p) => p.name.trim())
+    .map((p) => ({
+      name: p.name.trim().slice(0, 120),
+      description: [
+        p.description?.trim(),
+        p.mode && p.mode !== "shoot" ? `(${p.mode === "both" ? "Shoot + edit" : "Edit / post"})` : "",
+        p.category ? `Category: ${p.category}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
+        .slice(0, 400),
+      price: Math.max(0, Math.round(Number(p.price) || 0)),
+      unit: (p.unit || "Starting package").slice(0, 60),
+    }));
+}
+
+export function packagesToQuoteLineItems(
+  packages: PricingPackage[]
+): { description: string; quantity: number; unit_amount: number }[] {
+  const lines = packages
+    .filter((p) => p.name.trim() && (Number(p.price) || 0) > 0)
+    .map((p) => ({
+      description: [p.name.trim(), p.unit, p.category]
+        .filter(Boolean)
+        .join(" · ")
+        .slice(0, 300),
+      quantity: 1,
+      unit_amount: Math.max(0, Math.round(Number(p.price) || 0)),
+    }));
+  return lines.length
+    ? lines
+    : [{ description: "Creative services", quantity: 1, unit_amount: 0 }];
+}
+
+/** Derive category → min price map from packages (for filters / legacy UI). */
+export function categoryPricesFromPackages(
+  packages: PricingPackage[],
+  categories: string[]
+): CategoryPrices {
+  const next: CategoryPrices = {};
+  for (const cat of categories) {
+    const matching = packages.filter(
+      (p) => p.category === cat && (Number(p.price) || 0) > 0
+    );
+    if (matching.length) {
+      next[cat] = Math.min(...matching.map((p) => Number(p.price) || 0));
+    }
+  }
+  // If no category tags, fold lowest package into first category for directory floors
+  if (Object.keys(next).length === 0 && categories[0]) {
+    const floor = minPackagePrice(packages);
+    if (floor > 0) next[categories[0]] = floor;
+  }
+  return next;
+}
+
+/** Migrate legacy category_prices → packages when packages empty. */
+export function packagesFromCategoryPrices(
+  categories: string[],
+  prices: CategoryPrices,
+  mode: "shoot" | "edit" = "shoot"
+): PricingPackage[] {
+  const cats = categories.length ? categories : Object.keys(prices);
+  if (!cats.length) {
+    return [
+      newPricingPackage({
+        name: "Starting package",
+        price: 10000,
+        unit: "Starting package",
+      }),
+    ];
+  }
+  return cats.map((cat) => {
+    const guide = getPriceGuide(cat, mode);
+    const price = prices[cat] > 0 ? prices[cat] : guide.suggested;
+    return newPricingPackage({
+      name: `${cat} package`,
+      description: "",
+      price,
+      unit: guide.unit,
+      category: cat,
+      mode: mode === "edit" ? "edit" : "shoot",
+    });
+  });
+}
+
+export function normalizePackages(
+  raw: unknown,
+  opts?: { keepEmptyNames?: boolean }
+): PricingPackage[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      const name = String(r.name || "").trim();
+      if (!name && !opts?.keepEmptyNames) return null;
+      const modeRaw = String(r.mode || "shoot");
+      const mode: PackageMode =
+        modeRaw === "edit" || modeRaw === "both" ? modeRaw : "shoot";
+      return newPricingPackage({
+        id: String(r.id || `pkg_${Math.random().toString(36).slice(2, 9)}`),
+        name: name.slice(0, 120),
+        description: String(r.description || "").slice(0, 400),
+        price: Math.max(0, Math.round(Number(r.price) || 0)),
+        unit: String(r.unit || "Starting package").slice(0, 60),
+        category: r.category ? String(r.category).slice(0, 80) : undefined,
+        mode,
+      });
+    })
+    .filter(Boolean) as PricingPackage[];
+}
 
 /** Shoot / event coverage package guides */
 export const SHOOT_PRICE_GUIDES: Record<string, PriceGuide> = {

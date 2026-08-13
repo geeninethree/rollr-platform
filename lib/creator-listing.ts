@@ -4,12 +4,19 @@ import {
   meetsPublishRequirements,
   normalizeExternalUrl,
 } from "@/lib/portfolio";
-import { minCategoryPrice, syncCategoryPrices } from "@/lib/pricing";
+import {
+  minCategoryPrice,
+  minPackagePrice,
+  normalizePackages,
+  packagesFromCategoryPrices,
+  syncCategoryPrices,
+} from "@/lib/pricing";
 import { markReferralEarnedOnPublish } from "@/lib/referrals";
 import type { PortfolioItem, ServiceMode, ListingStatus } from "@/lib/types";
 import {
   draftToCreator,
   emptyStudioDraft,
+  withSyncedPricing,
   type StudioDraft,
 } from "@/lib/studio";
 
@@ -33,6 +40,8 @@ export type CreatorListingRow = {
   listing_status: string | null;
   works: PortfolioItem[] | null;
   category_prices: Record<string, number> | null;
+  pricing_packages?: unknown;
+  pricing_notes?: string | null;
 };
 
 export async function ensureCreatorRole(
@@ -143,7 +152,25 @@ export async function loadCreatorListing(
       : Object.fromEntries(
           categories.map((c) => [c, Number(row.starting_price ?? 10000)])
         );
-  const category_prices = syncCategoryPrices(categories, seeded, "shoot");
+  const legacyPrices = syncCategoryPrices(categories, seeded, "shoot");
+  let pricing_packages = normalizePackages(row.pricing_packages);
+  if (pricing_packages.length === 0) {
+    pricing_packages = packagesFromCategoryPrices(
+      categories,
+      legacyPrices,
+      "shoot"
+    );
+  }
+  const synced = withSyncedPricing(
+    {
+      categories,
+      pricing_packages,
+      category_prices: legacyPrices,
+      starting_price: Number(row.starting_price ?? 0),
+      edit_starting_price: Number(row.edit_starting_price ?? 0),
+    },
+    { seedIfEmpty: pricing_packages.length === 0 }
+  );
 
   const draft: StudioDraft = {
     full_name: profile?.full_name || "",
@@ -151,9 +178,11 @@ export async function loadCreatorListing(
     bio: row.bio || "",
     avatar_url: profile?.avatar_url || emptyStudioDraft().avatar_url,
     cover_url: row.cover_url || emptyStudioDraft().cover_url,
-    starting_price: minCategoryPrice(category_prices),
+    starting_price: synced.starting_price,
     edit_starting_price: Number(row.edit_starting_price ?? 0),
-    category_prices,
+    category_prices: synced.category_prices,
+    pricing_packages: synced.pricing_packages,
+    pricing_notes: row.pricing_notes || "",
     sub_regions: row.sub_regions?.length ? row.sub_regions : ["Bandra"],
     categories,
     service_modes: modes.length ? modes : ["shoot"],
@@ -204,12 +233,11 @@ export async function saveCreatorListing(
     listingStatus = "published";
   }
 
-  const category_prices = syncCategoryPrices(
-    draft.categories,
-    draft.category_prices || {},
-    "shoot"
-  );
-  const fromPrice = minCategoryPrice(category_prices);
+  const synced = withSyncedPricing(draft);
+  const fromPrice =
+    minPackagePrice(synced.pricing_packages) ||
+    minCategoryPrice(synced.category_prices) ||
+    0;
 
   const payload: Record<string, unknown> = {
     profile_id: userId,
@@ -220,14 +248,17 @@ export async function saveCreatorListing(
     categories: draft.categories,
     tagline: draft.tagline.trim() || null,
     service_modes: draft.service_modes,
-    edit_starting_price: draft.edit_starting_price || 0,
+    edit_starting_price:
+      synced.edit_starting_price || draft.edit_starting_price || 0,
     portfolio_url: normalizeExternalUrl(draft.links.portfolio_url ?? "") || null,
     instagram_url: normalizeExternalUrl(draft.links.instagram_url ?? "") || null,
     showreel_url: normalizeExternalUrl(draft.links.showreel_url ?? "") || null,
     cover_url: draft.cover_url || null,
     listing_status: listingStatus,
     works: draft.works,
-    category_prices,
+    category_prices: synced.category_prices,
+    pricing_packages: synced.pricing_packages,
+    pricing_notes: draft.pricing_notes?.trim().slice(0, 1000) || null,
     // Featured flag reserved for later tiers — not auto on publish
     is_featured: false,
     sub_status: listingStatus === "published" ? "active" : "inactive",
@@ -261,11 +292,21 @@ export async function saveCreatorListing(
     else listingId = data.id;
   }
 
-  // Retry without category_prices if column missing
-  if (errorMsg?.includes("category_prices")) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { category_prices: omitted, ...rest } = payload;
-    void omitted;
+  // Retry stripping optional columns if migration not applied yet
+  if (
+    errorMsg &&
+    (errorMsg.includes("category_prices") ||
+      errorMsg.includes("pricing_packages") ||
+      errorMsg.includes("pricing_notes"))
+  ) {
+    const rest = { ...payload };
+    if (errorMsg.includes("pricing_packages") || errorMsg.includes("pricing_notes")) {
+      delete rest.pricing_packages;
+      delete rest.pricing_notes;
+    }
+    if (errorMsg.includes("category_prices")) {
+      delete rest.category_prices;
+    }
     if (existing?.id) {
       const { data, error } = await supabase
         .from("creator_profiles")
@@ -314,7 +355,7 @@ export async function saveCreatorListing(
 
   const nextDraft: StudioDraft = {
     ...draft,
-    category_prices,
+    ...synced,
     starting_price: fromPrice,
     listing_status: listingStatus,
     updated_at: new Date().toISOString(),

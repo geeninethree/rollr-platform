@@ -12,6 +12,7 @@ import {
   computeMoneyTotals,
   createQuote,
   draftQuoteFromInquiry,
+  draftQuoteFromPackages,
   fetchMyQuotes,
   formatQuoteMoney,
   type CreateQuoteInput,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/quotes";
 import type { MoneyLineItem } from "@/lib/doc-money";
 import { fetchMyInquiries } from "@/lib/inquiries";
+import { normalizePackages, type PricingPackage } from "@/lib/pricing";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Inquiry } from "@/lib/types";
 
@@ -45,6 +47,7 @@ function QuotesInner() {
   const [userId, setUserId] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [accepted, setAccepted] = useState<Inquiry[]>([]);
+  const [listingPackages, setListingPackages] = useState<PricingPackage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateQuoteInput>({
@@ -100,6 +103,12 @@ function QuotesInner() {
         (i) => i.status === "accepted" || i.status === "pending"
       )
     );
+    const { data: listing } = await supabase
+      .from("creator_profiles")
+      .select("pricing_packages")
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    setListingPackages(normalizePackages(listing?.pricing_packages));
     if (prefillInquiry) {
       const match = briefs.items.find((i) => i.id === prefillInquiry);
       if (match) {
@@ -179,6 +188,71 @@ function QuotesInner() {
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
             {error}
           </p>
+        )}
+
+        {listingPackages.filter((p) => p.name.trim() && p.price > 0).length >
+          0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-white">
+                From your packages
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-xs text-white/40">
+                Prefill a quote with packages from your portfolio pricing.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setForm((f) => ({
+                    ...f,
+                    ...draftQuoteFromPackages(listingPackages, {
+                      name: f.seller_name,
+                      email: f.seller_email,
+                      phone: f.seller_phone,
+                    }),
+                    client_name: f.client_name,
+                  }));
+                  setShowForm(true);
+                }}
+              >
+                Use all priced packages
+              </Button>
+              <ul className="space-y-1.5 pt-1">
+                {listingPackages
+                  .filter((p) => p.name.trim() && p.price > 0)
+                  .map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      onClick={() => {
+                        setForm((f) => ({
+                          ...f,
+                          ...draftQuoteFromPackages([pkg], {
+                            name: f.seller_name,
+                            email: f.seller_email,
+                            phone: f.seller_phone,
+                          }),
+                          client_name: f.client_name,
+                        }));
+                        setShowForm(true);
+                      }}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/[0.06] px-3 py-2 text-left text-sm hover:border-primary/30"
+                    >
+                      <span className="font-medium text-white/90">
+                        {pkg.name}
+                      </span>
+                      <span className="text-xs text-primary">
+                        {formatQuoteMoney(pkg.price)} →
+                      </span>
+                    </button>
+                  ))}
+              </ul>
+            </CardContent>
+          </Card>
         )}
 
         {accepted.length > 0 && (

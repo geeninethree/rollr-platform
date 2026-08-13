@@ -31,9 +31,14 @@ import { LOCATIONS, SHOOT_CATEGORIES } from "@/lib/mock-data";
 import {
   formatFromPrice,
   getPriceGuide,
-  minCategoryPrice,
+  minPackagePrice,
+  newPricingPackage,
+  packagesToRateCardPackages,
   syncCategoryPrices,
+  type PackageMode,
+  type PricingPackage,
 } from "@/lib/pricing";
+import { createRateCard } from "@/lib/rate-cards";
 import { uploadCreatorImage, uploadSizeHint } from "@/lib/storage";
 import {
   STUDIO_STEPS,
@@ -49,6 +54,7 @@ import {
   emptyStudioDraft,
   PREVIEW_AVATAR,
   PREVIEW_COVER,
+  withSyncedPricing,
   type StudioDraft,
 } from "@/lib/studio";
 import type { PortfolioItem, ServiceMode } from "@/lib/types";
@@ -85,6 +91,8 @@ export default function StudioPage() {
   const [workRole, setWorkRole] = useState<"shoot" | "edit" | "both">("shoot");
   const [uploadingWorks, setUploadingWorks] = useState(false);
   const [uploadWorkError, setUploadWorkError] = useState<string | null>(null);
+  const [publishingRateCard, setPublishingRateCard] = useState(false);
+  const [rateCardMsg, setRateCardMsg] = useState<string | null>(null);
   const workFileRef = useRef<HTMLInputElement>(null);
   const stepTopRef = useRef<HTMLDivElement>(null);
 
@@ -231,56 +239,166 @@ export default function StudioPage() {
         ? d.categories.filter((c) => c !== cat)
         : [...d.categories, cat];
       const nextCats = categories.length ? categories : [cat];
+      // Keep packages as-is; only touch category list (filters)
       const category_prices = syncCategoryPrices(
         nextCats,
         d.category_prices || {},
         "shoot"
       );
-      return {
+      const synced = withSyncedPricing({
         ...d,
         categories: nextCats,
         category_prices,
-        starting_price: minCategoryPrice(category_prices),
-        updated_at: new Date().toISOString(),
-      };
-    });
-    setStepErrors([]);
-  }
-
-  function setCategoryPrice(cat: string, value: number) {
-    setDraft((d) => {
-      const category_prices = {
-        ...d.category_prices,
-        [cat]: value,
-      };
+      });
       return {
         ...d,
-        category_prices,
-        starting_price: minCategoryPrice(category_prices),
+        categories: nextCats,
+        ...synced,
         updated_at: new Date().toISOString(),
       };
     });
     setStepErrors([]);
   }
 
-  /** Parse price field without sticky leading zeros (Number("") || 0 bug). */
-  function onPriceInputChange(cat: string, raw: string) {
-    const digits = raw.replace(/\D/g, "");
-    if (digits === "") {
-      setCategoryPrice(cat, 0);
-      return;
-    }
-    // "025000" → 25000; avoid controlled input re-injecting a leading 0
-    const normalized = digits.replace(/^0+/, "") || "0";
-    setCategoryPrice(cat, Number(normalized));
+  function updatePackage(id: string, patch: Partial<PricingPackage>) {
+    setDraft((d) => {
+      const pricing_packages = (d.pricing_packages || []).map((p) =>
+        p.id === id ? { ...p, ...patch } : p
+      );
+      const synced = withSyncedPricing({ ...d, pricing_packages });
+      return {
+        ...d,
+        ...synced,
+        updated_at: new Date().toISOString(),
+      };
+    });
+    setStepErrors([]);
   }
 
-  function priceInputDisplay(cat: string, suggested: number): string {
-    const stored = draft.category_prices[cat];
-    if (stored === undefined || stored === null) return String(suggested);
-    // Empty while zero so user can type a fresh amount without a stuck "0"
-    if (stored === 0) return "";
-    return String(stored);
+  function defaultPackageMode(d: StudioDraft): PackageMode {
+    const shoot = d.service_modes.includes("shoot");
+    const edit = d.service_modes.includes("edit");
+    if (edit && !shoot) return "edit";
+    if (shoot && edit) return "shoot";
+    return "shoot";
+  }
+
+  function addPackage(seed?: Partial<PricingPackage>) {
+    setDraft((d) => {
+      const mode = seed?.mode || defaultPackageMode(d);
+      const guideMode = mode === "edit" ? "edit" : "shoot";
+      const guide = seed?.category
+        ? getPriceGuide(seed.category, guideMode)
+        : getPriceGuide(mode === "edit" ? "Reels / vertical" : "Custom", guideMode);
+      const pricing_packages = [
+        ...(d.pricing_packages || []),
+        newPricingPackage({
+          name: seed?.name || (mode === "edit" ? "Edit package" : "New package"),
+          description: seed?.description || "",
+          price: seed?.price ?? guide.suggested,
+          unit: seed?.unit || guide.unit,
+          category: seed?.category,
+          mode,
+        }),
+      ];
+      const synced = withSyncedPricing({ ...d, pricing_packages });
+      return {
+        ...d,
+        ...synced,
+        updated_at: new Date().toISOString(),
+      };
+    });
+    setStepErrors([]);
+  }
+
+  function removePackage(id: string) {
+    setDraft((d) => {
+      const pricing_packages = (d.pricing_packages || []).filter(
+        (p) => p.id !== id
+      );
+      const synced = withSyncedPricing({ ...d, pricing_packages });
+      return {
+        ...d,
+        ...synced,
+        updated_at: new Date().toISOString(),
+      };
+    });
+    setStepErrors([]);
+  }
+
+  function addPackageForCategory(cat: string) {
+    const guide = getPriceGuide(cat, "shoot");
+    addPackage({
+      name: `${cat} package`,
+      price: guide.suggested,
+      unit: guide.unit,
+      category: cat,
+      mode: "shoot",
+    });
+  }
+
+  function addEditPackagePreset(label: string) {
+    const guide = getPriceGuide(label, "edit");
+    addPackage({
+      name: label,
+      price: guide.suggested,
+      unit: guide.unit,
+      mode: "edit",
+    });
+  }
+
+  async function publishPackagesAsRateCard() {
+    if (!userId || publishingRateCard) return;
+    const named = (draft.pricing_packages || []).filter((p) => p.name.trim());
+    if (named.length === 0) {
+      setRateCardMsg("Add named packages first.");
+      return;
+    }
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    setPublishingRateCard(true);
+    setRateCardMsg(null);
+    // Save listing first so packages persist
+    const saved = await saveCreatorListing(supabase, userId, draft);
+    if (!saved.ok) {
+      setPublishingRateCard(false);
+      setRateCardMsg(saved.error || "Couldn’t save listing.");
+      return;
+    }
+    if (saved.draft) setDraft(saved.draft);
+    const result = await createRateCard(supabase, userId, {
+      title: "Rate card",
+      creator_name: draft.full_name || "Creator",
+      creator_tagline: draft.tagline || undefined,
+      packages: packagesToRateCardPackages(named),
+      notes:
+        draft.pricing_notes?.trim() ||
+        "Prices indicative. Final quote after brief. Pay creator directly.",
+      status: "active",
+    });
+    setPublishingRateCard(false);
+    if (result.error || !result.card) {
+      setRateCardMsg(result.error || "Couldn’t create rate card.");
+      return;
+    }
+    setRateCardMsg("Rate card published — open to share.");
+    router.push(`/rate-cards/${result.card.id}`);
+  }
+
+  /** Parse price field without sticky leading zeros. */
+  function onPackagePriceChange(id: string, raw: string) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits === "") {
+      updatePackage(id, { price: 0 });
+      return;
+    }
+    const normalized = digits.replace(/^0+/, "") || "0";
+    updatePackage(id, { price: Number(normalized) });
+  }
+
+  function packagePriceDisplay(price: number): string {
+    if (!price || price <= 0) return "";
+    return String(price);
   }
 
   function addWork() {
@@ -646,81 +764,294 @@ export default function StudioPage() {
                 )}
 
                 {step === "pricing" && (
-                  <div className="space-y-4">
-                    <p className="text-xs text-muted-foreground">
-                      Set a{" "}
-                      <strong className="text-foreground">
-                        starting package
-                      </strong>{" "}
-                      for each category — not hourly. Clients see “From ₹…”.
-                    </p>
-                    {draft.categories.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        No categories yet.{" "}
-                        <button
-                          type="button"
-                          className="font-medium text-primary underline-offset-2 hover:underline"
-                          onClick={() => goToStep("services")}
-                        >
-                          Go back to Services
-                        </button>
+                  <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-muted-foreground">
+                        Add{" "}
+                        <strong className="text-foreground">
+                          named packages
+                        </strong>{" "}
+                        — full day, half day, reels, custom offers — not just
+                        one number per category. Clients see package list +{" "}
+                        <strong className="text-foreground">From ₹…</strong> on
+                        your card.
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Categories (Services step) are for{" "}
+                        <em>filters</em>. Packages are what you actually sell.
+                      </p>
+                    </div>
+
+                    {(draft.pricing_packages || []).length === 0 && (
+                      <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+                        No packages yet. Add a custom one or quick-add from a
+                        category below.
                       </p>
                     )}
-                    {draft.categories.map((cat) => {
-                      const guide = getPriceGuide(cat, "shoot");
-                      return (
-                        <div
-                          key={cat}
-                          className="rounded-lg border border-border bg-background/40 p-3"
+
+                    <ul className="space-y-3">
+                      {(draft.pricing_packages || []).map((pkg, idx) => (
+                        <li
+                          key={pkg.id}
+                          className="space-y-3 rounded-xl border border-border bg-background/40 p-3 sm:p-4"
                         >
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-medium">{cat}</p>
-                              <p className="text-[11px] text-muted-foreground">
-                                {guide.unit}
-                              </p>
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                              Package {idx + 1}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => removePackage(pkg.id)}
+                              className="rounded-md p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-destructive"
+                              aria-label="Remove package"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-[1fr_110px]">
+                            <div className="space-y-1">
+                              <label className="text-[11px] text-muted-foreground">
+                                Name
+                              </label>
+                              <Input
+                                value={pkg.name}
+                                onChange={(e) =>
+                                  updatePackage(pkg.id, {
+                                    name: e.target.value,
+                                  })
+                                }
+                                placeholder="e.g. Wedding full day · 2 cams"
+                                className="bg-background/50"
+                              />
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-muted-foreground">
-                                ₹
-                              </span>
+                            <div className="space-y-1">
+                              <label className="text-[11px] text-muted-foreground">
+                                Price ₹
+                              </label>
                               <Input
                                 type="text"
                                 inputMode="numeric"
                                 autoComplete="off"
-                                placeholder={String(guide.suggested)}
-                                value={priceInputDisplay(cat, guide.suggested)}
+                                placeholder="On request"
+                                value={packagePriceDisplay(pkg.price)}
                                 onChange={(e) =>
-                                  onPriceInputChange(cat, e.target.value)
+                                  onPackagePriceChange(pkg.id, e.target.value)
                                 }
-                                onBlur={() => {
-                                  // If left empty, restore suggested package floor
-                                  const v = draft.category_prices[cat];
-                                  if (v === undefined || v === null || v <= 0) {
-                                    setCategoryPrice(cat, guide.suggested);
-                                  }
-                                }}
-                                className="h-9 w-32 bg-background/50 tabular-nums"
+                                className="bg-background/50 tabular-nums"
                               />
                             </div>
                           </div>
-                          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                            {guide.hint}
+                          <div className="space-y-1">
+                            <label className="text-[11px] text-muted-foreground">
+                              What’s included (optional)
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={pkg.description || ""}
+                              onChange={(e) =>
+                                updatePackage(pkg.id, {
+                                  description: e.target.value,
+                                })
+                              }
+                              placeholder="Hours, deliverables, team size…"
+                              className="w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm"
+                            />
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="space-y-1">
+                              <label className="text-[11px] text-muted-foreground">
+                                Type
+                              </label>
+                              <select
+                                value={pkg.mode || "shoot"}
+                                onChange={(e) =>
+                                  updatePackage(pkg.id, {
+                                    mode: e.target.value as PackageMode,
+                                  })
+                                }
+                                className="flex h-9 w-full rounded-md border border-input bg-background/50 px-3 text-sm"
+                              >
+                                <option value="shoot">Shoot / coverage</option>
+                                <option value="edit">Edit / post</option>
+                                <option value="both">Shoot + edit</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[11px] text-muted-foreground">
+                                Unit label
+                              </label>
+                              <Input
+                                value={pkg.unit || ""}
+                                onChange={(e) =>
+                                  updatePackage(pkg.id, {
+                                    unit: e.target.value,
+                                  })
+                                }
+                                placeholder="Full day · Per reel"
+                                className="bg-background/50"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[11px] text-muted-foreground">
+                                Category (optional)
+                              </label>
+                              <select
+                                value={pkg.category || ""}
+                                onChange={(e) =>
+                                  updatePackage(pkg.id, {
+                                    category: e.target.value || undefined,
+                                  })
+                                }
+                                className="flex h-9 w-full rounded-md border border-input bg-background/50 px-3 text-sm"
+                              >
+                                <option value="">None / custom</option>
+                                {draft.categories.map((c) => (
+                                  <option key={c} value={c}>
+                                    {c}
+                                  </option>
+                                ))}
+                                {SHOOT_CATEGORIES.filter(
+                                  (c) => !draft.categories.includes(c)
+                                ).map((c) => (
+                                  <option key={c} value={c}>
+                                    {c}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addPackage()}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add package
+                      </Button>
+                      {draft.service_modes.includes("edit") && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            addPackage({
+                              mode: "edit",
+                              name: "Edit package",
+                            })
+                          }
+                        >
+                          + Edit package
+                        </Button>
+                      )}
+                    </div>
+
+                    {draft.categories.length > 0 &&
+                      draft.service_modes.includes("shoot") && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Quick-add shoot packages
                           </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {draft.categories.map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => addPackageForCategory(cat)}
+                                className="rounded-full border border-border bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/60 hover:border-primary/40 hover:text-primary"
+                              >
+                                + {cat}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      );
-                    })}
-                    {draft.categories.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Directory shows{" "}
-                        <span className="font-medium text-foreground">
-                          {formatFromPrice(
-                            minCategoryPrice(draft.category_prices)
-                          )}
-                        </span>{" "}
-                        (your lowest package floor).
-                      </p>
+                      )}
+
+                    {draft.service_modes.includes("edit") && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Quick-add edit packages
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            "Wedding film",
+                            "Reels / vertical",
+                            "Colour grade",
+                            "Same-day teaser",
+                          ].map((label) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => addEditPackagePreset(label)}
+                              className="rounded-full border border-border bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/60 hover:border-primary/40 hover:text-primary"
+                            >
+                              + {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
+
+                    <div className="space-y-1.5 border-t border-border pt-4">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Pricing notes (optional)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={draft.pricing_notes || ""}
+                        onChange={(e) =>
+                          updateLocal({ pricing_notes: e.target.value })
+                        }
+                        placeholder="e.g. 30% deposit · Travel outside Mumbai extra · Final quote after brief"
+                        className="w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Shown on your public profile under packages.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={
+                          publishingRateCard ||
+                          (draft.pricing_packages || []).filter((p) =>
+                            p.name.trim()
+                          ).length === 0
+                        }
+                        onClick={() => void publishPackagesAsRateCard()}
+                      >
+                        {publishingRateCard ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : null}
+                        Publish as public rate card
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground">
+                        Shareable link for Insta / clients (saves listing first).
+                      </p>
+                    </div>
+                    {rateCardMsg && (
+                      <p className="text-xs text-primary">{rateCardMsg}</p>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      Directory card shows{" "}
+                      <span className="font-medium text-foreground">
+                        {formatFromPrice(
+                          minPackagePrice(draft.pricing_packages) ||
+                            draft.starting_price
+                        )}
+                      </span>{" "}
+                      (lowest package with a price). Leave ₹ blank for “on
+                      request” packages.
+                    </p>
                   </div>
                 )}
 

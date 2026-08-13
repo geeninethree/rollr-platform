@@ -100,6 +100,13 @@ export type CreatorCardModel = {
   quality_score: number;
   /**
    * Starting package price per category (INR), e.g. { Wedding: 25000 }.
+   * Derived from pricing_packages when present. Not hourly.
+   */
+  pricing_packages?: import("@/lib/pricing").PricingPackage[];
+  /** Free-text notes (deposit, travel, inclusions). */
+  pricing_notes?: string | null;
+  /**
+   * Starting package price per category (INR), e.g. { Wedding: 25000 }.
    * Not hourly — package floor for that job type.
    */
   category_prices: Record<string, number>;

@@ -1,4 +1,4 @@
-import { minCategoryPrice } from "@/lib/pricing";
+import { minCategoryPrice, minPackagePrice } from "@/lib/pricing";
 import type { BriefType, CreatorCardModel, ServiceMode } from "@/lib/types";
 
 export function formatPriceInr(price: number) {
@@ -99,14 +99,21 @@ export function creatorToClientWhatsAppUrl(input: {
 }
 
 export function shootPrice(creator: CreatorCardModel) {
+  const fromPkgs = minPackagePrice(creator.pricing_packages, "shoot");
+  if (fromPkgs > 0) return fromPkgs;
   const fromCats = minCategoryPrice(creator.category_prices);
   return fromCats > 0 ? fromCats : creator.starting_price;
 }
 
 export function editPrice(creator: CreatorCardModel) {
+  const fromPkgs = minPackagePrice(creator.pricing_packages, "edit");
+  if (fromPkgs > 0) return fromPkgs;
+  if (creator.edit_starting_price && creator.edit_starting_price > 0) {
+    return creator.edit_starting_price;
+  }
   const fromCats = minCategoryPrice(creator.category_prices);
   if (fromCats > 0) return fromCats;
-  return creator.edit_starting_price ?? creator.starting_price;
+  return creator.starting_price;
 }
 
 /** Lowest package floor across categories (or mode fallback). */

@@ -4,7 +4,12 @@ import {
   itemsFromUrls,
   mergeWorks,
 } from "@/lib/portfolio";
-import { minCategoryPrice } from "@/lib/pricing";
+import {
+  minCategoryPrice,
+  minPackagePrice,
+  normalizePackages,
+  packagesFromCategoryPrices,
+} from "@/lib/pricing";
 import type {
   CreatorCardModel,
   ListingStatus,
@@ -33,6 +38,8 @@ type Row = {
   listing_status: string | null;
   works: PortfolioItem[] | unknown;
   category_prices: Record<string, number> | null;
+  pricing_packages?: unknown;
+  pricing_notes?: string | null;
   rating_avg?: number | null;
   review_count?: number | null;
   profiles: {
@@ -58,9 +65,20 @@ export function rowToCreatorCard(row: Row): CreatorCardModel {
     row.category_prices && typeof row.category_prices === "object"
       ? (row.category_prices as Record<string, number>)
       : {};
+  let pricing_packages = normalizePackages(row.pricing_packages);
+  if (pricing_packages.length === 0 && Object.keys(category_prices).length) {
+    pricing_packages = packagesFromCategoryPrices(
+      categories,
+      category_prices,
+      "shoot"
+    );
+  }
+  const pricing_notes = row.pricing_notes || null;
 
   const fromPrice =
-    minCategoryPrice(category_prices) || Number(row.starting_price ?? 0);
+    minPackagePrice(pricing_packages) ||
+    minCategoryPrice(category_prices) ||
+    Number(row.starting_price ?? 0);
 
   // If works empty, synthesize from cover so cards don't look broken
   let finalWorks = works;
@@ -113,6 +131,8 @@ export function rowToCreatorCard(row: Row): CreatorCardModel {
     listing_status: (row.listing_status as ListingStatus) || "draft",
     quality_score: 0,
     category_prices,
+    pricing_packages,
+    pricing_notes,
   };
 
   return { ...base, quality_score: computeQualityScore(base) };
@@ -145,6 +165,8 @@ export async function fetchPublishedCreators(
       listing_status,
       works,
       category_prices,
+      pricing_packages,
+      pricing_notes,
       rating_avg,
       review_count,
       profiles!inner (
@@ -157,9 +179,11 @@ export async function fetchPublishedCreators(
     .order("review_count", { ascending: false });
 
   if (error) {
-    // Fallback without category_prices if migration 00004 not applied
+    // Fallback without optional pricing columns if migrations not applied
     if (
       error.message.includes("category_prices") ||
+      error.message.includes("pricing_packages") ||
+      error.message.includes("pricing_notes") ||
       error.message.includes("column")
     ) {
       const retry = await supabase
@@ -241,6 +265,8 @@ export async function fetchCreatorById(
       listing_status,
       works,
       category_prices,
+      pricing_packages,
+      pricing_notes,
       rating_avg,
       review_count,
       profiles!inner (
@@ -253,7 +279,7 @@ export async function fetchCreatorById(
     .maybeSingle();
 
   if (error) {
-    // Retry without category_prices
+    // Retry without optional pricing columns
     const retry = await supabase
       .from("creator_profiles")
       .select(

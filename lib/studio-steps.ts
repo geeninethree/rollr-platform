@@ -42,9 +42,9 @@ export const STUDIO_STEPS: StudioStep[] = [
   {
     id: "pricing",
     number: 4,
-    title: "Package prices",
+    title: "Packages & pricing",
     short: "Prices",
-    description: "Starting package floors by category (not hourly).",
+    description: "Named packages, custom offers, and notes — not just a single number.",
   },
   {
     id: "portfolio",
@@ -104,14 +104,38 @@ export function validateStudioStep(
       break;
     }
     case "pricing": {
-      if (draft.categories.length === 0) {
-        errors.push("Go back and pick categories first.");
+      const packages = draft.pricing_packages || [];
+      if (packages.length === 0) {
+        errors.push(
+          "Add at least one package (e.g. Wedding full day, Corporate half day)."
+        );
         break;
       }
-      for (const cat of draft.categories) {
-        const price = draft.category_prices[cat] ?? 0;
-        if (!price || price <= 0) {
-          errors.push(`Set a starting package price for ${cat}.`);
+      const unnamed = packages.filter((p) => !p.name.trim());
+      if (unnamed.length > 0) {
+        errors.push(
+          `Name every package (${unnamed.length} still blank — e.g. “Wedding full day”).`
+        );
+      }
+      const named = packages.filter((p) => p.name.trim());
+      const hasPriced = named.some((p) => (Number(p.price) || 0) > 0);
+      // Directory needs a positive floor for “From ₹…”
+      if (named.length > 0 && !hasPriced) {
+        errors.push(
+          "Set a ₹ price on at least one package so clients see “From ₹…” (others can stay on request)."
+        );
+      }
+      const offersEdit = draft.service_modes.includes("edit");
+      const offersShoot = draft.service_modes.includes("shoot");
+      // Edit-only: packages default to “shoot” in UI — require edit/both mode
+      if (offersEdit && !offersShoot && named.length > 0) {
+        const hasEditPkg = named.some(
+          (p) => p.mode === "edit" || p.mode === "both"
+        );
+        if (!hasEditPkg) {
+          errors.push(
+            "You offer editing only — set package type to “Edit / post” on at least one package."
+          );
         }
       }
       break;

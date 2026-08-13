@@ -6,7 +6,14 @@ import {
   computeQualityScore,
   normalizeExternalUrl,
 } from "@/lib/portfolio";
-import { minCategoryPrice, syncCategoryPrices } from "@/lib/pricing";
+import {
+  categoryPricesFromPackages,
+  minCategoryPrice,
+  minPackagePrice,
+  packagesFromCategoryPrices,
+  syncCategoryPrices,
+  type PricingPackage,
+} from "@/lib/pricing";
 import type {
   CreatorCardModel,
   ExternalLinks,
@@ -21,11 +28,18 @@ export type StudioDraft = {
   bio: string;
   avatar_url: string;
   cover_url: string;
-  /** @deprecated use category_prices — kept as min cache */
+  /** Min package floor — directory "From ₹…" */
   starting_price: number;
   edit_starting_price: number;
-  /** Category → package starting price (INR) */
+  /**
+   * Derived from packages (and legacy). Prefer pricing_packages.
+   * Kept for directory cards / filters.
+   */
   category_prices: Record<string, number>;
+  /** Named packages (primary pricing UX) */
+  pricing_packages: PricingPackage[];
+  /** Deposit, travel, what's included notes */
+  pricing_notes: string;
   sub_regions: string[];
   categories: string[];
   service_modes: ServiceMode[];
@@ -43,16 +57,23 @@ export const PREVIEW_COVER =
 
 export function emptyStudioDraft(): StudioDraft {
   const categories = ["Wedding"];
-  const category_prices = syncCategoryPrices(categories, {}, "shoot");
+  const pricing_packages = packagesFromCategoryPrices(categories, {}, "shoot");
+  const category_prices = categoryPricesFromPackages(
+    pricing_packages,
+    categories
+  );
   return {
     full_name: "",
     tagline: "",
     bio: "",
     avatar_url: "",
     cover_url: "",
-    starting_price: minCategoryPrice(category_prices),
+    starting_price:
+      minPackagePrice(pricing_packages) || minCategoryPrice(category_prices),
     edit_starting_price: 5000,
     category_prices,
+    pricing_packages,
+    pricing_notes: "",
     sub_regions: ["Bandra"],
     categories,
     service_modes: ["shoot"],
@@ -67,6 +88,62 @@ export function emptyStudioDraft(): StudioDraft {
   };
 }
 
+/**
+ * Recompute directory floors from packages.
+ * Important: empty array stays empty (do not re-seed) so “delete all” works.
+ * Pass seedIfEmpty only when loading legacy listings.
+ */
+export function withSyncedPricing(
+  draft: Pick<
+    StudioDraft,
+    "categories" | "pricing_packages" | "category_prices" | "starting_price"
+  > &
+    Partial<StudioDraft>,
+  opts?: { seedIfEmpty?: boolean }
+): Pick<
+  StudioDraft,
+  "pricing_packages" | "category_prices" | "starting_price" | "edit_starting_price"
+> {
+  let packages = Array.isArray(draft.pricing_packages)
+    ? draft.pricing_packages
+    : [];
+  if (packages.length === 0 && opts?.seedIfEmpty) {
+    packages = packagesFromCategoryPrices(
+      draft.categories,
+      draft.category_prices || {},
+      "shoot"
+    );
+  }
+  const category_prices = categoryPricesFromPackages(
+    packages,
+    draft.categories
+  );
+  const fromPrice =
+    minPackagePrice(packages) ||
+    minCategoryPrice(category_prices) ||
+    draft.starting_price ||
+    0;
+  const editFloor =
+    minPackagePrice(packages, "edit") ||
+    Number(draft.edit_starting_price) ||
+    0;
+  return {
+    pricing_packages: packages,
+    category_prices:
+      Object.keys(category_prices).length > 0
+        ? category_prices
+        : draft.categories.length
+          ? syncCategoryPrices(
+              draft.categories,
+              draft.category_prices || {},
+              "shoot"
+            )
+          : {},
+    starting_price: fromPrice,
+    edit_starting_price: editFloor,
+  };
+}
+
 export function draftToCreator(draft: StudioDraft): CreatorCardModel {
   const links: ExternalLinks = {
     portfolio_url: normalizeExternalUrl(draft.links.portfolio_url ?? "") || null,
@@ -74,12 +151,8 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     showreel_url: normalizeExternalUrl(draft.links.showreel_url ?? "") || null,
   };
 
-  const category_prices =
-    Object.keys(draft.category_prices || {}).length > 0
-      ? draft.category_prices
-      : syncCategoryPrices(draft.categories, {}, "shoot");
-
-  const fromPrice = minCategoryPrice(category_prices) || draft.starting_price;
+  const synced = withSyncedPricing(draft);
+  const fromPrice = synced.starting_price;
 
   const base: CreatorCardModel = {
     id: "studio-draft",
@@ -103,7 +176,7 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     review_count: 0,
     response_label: "Usually replies within a day",
     service_modes: draft.service_modes,
-    edit_starting_price: draft.edit_starting_price,
+    edit_starting_price: synced.edit_starting_price || draft.edit_starting_price,
     edit_portfolio: draft.works
       .filter((w) => w.role === "edit" || w.role === "both")
       .map((w) => w.url),
@@ -111,7 +184,9 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     links,
     listing_status: draft.listing_status,
     quality_score: 0,
-    category_prices,
+    category_prices: synced.category_prices,
+    pricing_packages: synced.pricing_packages,
+    pricing_notes: draft.pricing_notes || "",
   };
   return { ...base, quality_score: computeQualityScore(base) };
 }

@@ -8,6 +8,10 @@ import {
   migrationHint,
   type MoneyLineItem,
 } from "@/lib/doc-money";
+import {
+  packagesToQuoteLineItems,
+  type PricingPackage,
+} from "@/lib/pricing";
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "declined" | "void";
 
@@ -80,6 +84,30 @@ function rowToQuote(row: Record<string, unknown>): Quote {
     public_token: String(row.public_token || ""),
     created_at: String(row.created_at || ""),
     updated_at: String(row.updated_at || ""),
+  };
+}
+
+/** Prefill line items from listing packages (studio pricing). */
+export function draftQuoteFromPackages(
+  packages: PricingPackage[],
+  seller: { name: string; email?: string; phone?: string },
+  client?: { name?: string; email?: string; phone?: string }
+): CreateQuoteInput {
+  const line_items = packagesToQuoteLineItems(packages);
+  const valid = new Date();
+  valid.setDate(valid.getDate() + 14);
+  return {
+    seller_name: seller.name,
+    seller_email: seller.email,
+    seller_phone: seller.phone,
+    client_name: client?.name || "",
+    client_email: client?.email,
+    client_phone: client?.phone,
+    line_items,
+    gst_percent: 0,
+    notes: "From listing packages",
+    valid_until: valid.toISOString().slice(0, 10),
+    status: "draft",
   };
 }
 

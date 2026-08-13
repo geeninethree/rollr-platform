@@ -29,6 +29,7 @@ import {
   isHybrid,
   priceLabelFrom,
 } from "@/lib/format";
+import { packagesForMode } from "@/lib/pricing";
 import { workCount } from "@/lib/portfolio";
 import type { BriefType, CreatorCardModel, ServiceMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,14 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
     if (hybrid) return "full_package";
     return canEdit ? "edit" : "shoot";
   }, [tab, canEdit, canShoot, hybrid]);
+
+  const tabPackages = useMemo(() => {
+    const all = creator.pricing_packages || [];
+    if (all.length === 0) return [];
+    const filtered = packagesForMode(all, tab);
+    // If tab filter empty (e.g. only shoot packages on edit tab), show all
+    return filtered.length > 0 ? filtered : all;
+  }, [creator.pricing_packages, tab]);
 
   return (
     <div className="bg-grid-fade">
@@ -343,28 +352,74 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                 {priceLabelFrom(price)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Category floors — not hourly. Final quote after brief.
+                Package floors — not hourly. Final quote after brief.
               </p>
 
-              {Object.keys(creator.category_prices || {}).length > 0 && (
-                <ul className="mt-4 space-y-1.5 border-t border-border pt-3">
-                  {Object.entries(creator.category_prices)
-                    .filter(([, p]) => p > 0)
-                    .sort((a, b) => a[1] - b[1])
-                    .map(([cat, p]) => (
-                      <li
-                        key={cat}
-                        className="flex items-center justify-between gap-2 text-xs"
-                      >
-                        <span className="min-w-0 truncate text-muted-foreground">
-                          {cat}
-                        </span>
-                        <span className="shrink-0 font-medium tabular-nums text-gold">
-                          {formatPriceInr(p)}
-                        </span>
+              {tabPackages.filter((p) => p.name.trim()).length > 0 ? (
+                <ul className="mt-4 space-y-3 border-t border-border pt-3">
+                  {tabPackages
+                    .filter((p) => p.name.trim())
+                    .slice(0, 8)
+                    .map((pkg) => (
+                      <li key={pkg.id} className="space-y-0.5">
+                        <div className="flex items-start justify-between gap-2 text-xs">
+                          <span className="min-w-0 font-medium text-foreground">
+                            {pkg.name}
+                          </span>
+                          <span className="shrink-0 font-semibold tabular-nums text-gold">
+                            {pkg.price > 0
+                              ? `From ${formatPriceInr(pkg.price)}`
+                              : "On request"}
+                          </span>
+                        </div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {[
+                            pkg.unit,
+                            pkg.mode === "edit"
+                              ? "Edit"
+                              : pkg.mode === "both"
+                                ? "Shoot + edit"
+                                : null,
+                            pkg.category,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                        {pkg.description && (
+                          <p className="text-[11px] leading-relaxed text-muted-foreground">
+                            {pkg.description}
+                          </p>
+                        )}
                       </li>
                     ))}
                 </ul>
+              ) : (
+                Object.keys(creator.category_prices || {}).length > 0 && (
+                  <ul className="mt-4 space-y-1.5 border-t border-border pt-3">
+                    {Object.entries(creator.category_prices)
+                      .filter(([, p]) => p > 0)
+                      .sort((a, b) => a[1] - b[1])
+                      .map(([cat, p]) => (
+                        <li
+                          key={cat}
+                          className="flex items-center justify-between gap-2 text-xs"
+                        >
+                          <span className="min-w-0 truncate text-muted-foreground">
+                            {cat}
+                          </span>
+                          <span className="shrink-0 font-medium tabular-nums text-gold">
+                            {formatPriceInr(p)}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                )
+              )}
+
+              {creator.pricing_notes && (
+                <p className="mt-3 border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
+                  {creator.pricing_notes}
+                </p>
               )}
 
               <div className="mt-4 hidden lg:block">
