@@ -36,6 +36,11 @@ const creatorLinks = [
   },
   { href: "/list#business-kit", label: "What’s in the kit", desc: "See tools before signup" },
   { href: "/guides/creators", label: "Creator guide", desc: "List · briefs · after the job" },
+  {
+    href: "/install",
+    label: "Use on phone",
+    desc: "Add to Home Screen steps",
+  },
 ];
 
 const creatorLinksSignedIn = [
@@ -49,6 +54,11 @@ const creatorLinksSignedIn = [
 const clientLinks = [
   { href: "/my-briefs", label: "My briefs", desc: "What you sent" },
   { href: "/guides/clients", label: "Client guide", desc: "How hiring works" },
+  {
+    href: "/install",
+    label: "Use on phone",
+    desc: "Add to Home Screen steps",
+  },
 ];
 
 export function Navbar() {

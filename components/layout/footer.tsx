@@ -6,6 +6,7 @@ const clientLinks = [
   { href: "/editors", label: "Editors" },
   { href: "/job-board", label: "Job board" },
   { href: "/guides/clients", label: "Client guide" },
+  { href: "/install", label: "Use on your phone" },
 ];
 
 const creatorLinks = [
@@ -14,6 +15,7 @@ const creatorLinks = [
   { href: "/inbox", label: "Inbox" },
   { href: "/tools", label: "Business kit" },
   { href: "/guides/creators", label: "Creator guide" },
+  { href: "/install", label: "Use on your phone" },
   { href: "/list#join", label: "Register interest" },
 ];
 

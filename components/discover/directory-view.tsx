@@ -7,6 +7,7 @@ import {
   HeroSearch,
 } from "@/components/discover/hero-search";
 import { HowItWorks } from "@/components/discover/how-it-works";
+import { InstallOnPhoneBand } from "@/components/layout/install-on-phone-band";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CreatorCardSkeleton } from "@/components/ui/skeleton";
 import { fetchPublishedCreators } from "@/lib/directory";
@@ -129,6 +130,8 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
         </section>
 
         <HowItWorks />
+
+        <InstallOnPhoneBand />
       </div>
     </div>
   );

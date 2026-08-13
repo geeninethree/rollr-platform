@@ -142,6 +142,16 @@ export default function CreatorGuidePage() {
         card): <code>/creators/&lt;id&gt;</code>
       </p>
 
+      <h2>On your phone</h2>
+      <p>
+        Check Inbox and briefs on the go.{" "}
+        <Link href="/install" className="text-primary">
+          Add ROLLR to your home screen
+        </Link>{" "}
+        (iPhone: Safari → Share → Add to Home Screen; Android: Chrome → menu →
+        Add to Home screen). No App Store app required.
+      </p>
+
       <div className="not-prose mt-6 flex flex-wrap gap-2">
         <Button asChild className="font-semibold">
           <Link href="/signup?role=creator&next=/studio">

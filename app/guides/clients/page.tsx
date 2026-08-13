@@ -104,6 +104,13 @@ export default function ClientGuidePage() {
           Payment is between you and the creator (UPI, bank, cash — whatever you
           agree)
         </li>
+        <li>
+          On your phone?{" "}
+          <Link href="/install" className="text-primary">
+            Add ROLLR to your home screen
+          </Link>{" "}
+          (iPhone Safari / Android Chrome) for one-tap access
+        </li>
       </ul>
 
       <div className="not-prose mt-6 flex flex-wrap gap-2">
