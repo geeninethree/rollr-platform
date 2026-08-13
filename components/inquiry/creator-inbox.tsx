@@ -155,6 +155,18 @@ export function CreatorInbox() {
     window.location.href = `/invoices?inquiry=${encodeURIComponent(inquiry.id)}`;
   }
 
+  function openQuote(inquiry: Inquiry) {
+    window.location.href = `/quotes?inquiry=${encodeURIComponent(inquiry.id)}`;
+  }
+
+  function openBooking(inquiry: Inquiry) {
+    window.location.href = `/bookings?inquiry=${encodeURIComponent(inquiry.id)}`;
+  }
+
+  function openDelivery(inquiry: Inquiry) {
+    window.location.href = `/delivery?inquiry=${encodeURIComponent(inquiry.id)}`;
+  }
+
   async function requestReview(inquiry: Inquiry) {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
@@ -338,10 +350,31 @@ export function CreatorInbox() {
                           <FileText className="h-4 w-4" />
                           Invoice
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openQuote(inquiry)}
+                        >
+                          Quote
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openBooking(inquiry)}
+                        >
+                          Booking
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDelivery(inquiry)}
+                        >
+                          Delivery
+                        </Button>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        After the job: request a review or generate an invoice
-                        for the client.
+                        After the job: review, invoice, delivery note — or send a
+                        quote / booking confirmation.
                       </p>
                     </div>
                   )}

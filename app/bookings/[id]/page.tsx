@@ -3,31 +3,26 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Copy, Loader2, MessageCircle, Printer } from "lucide-react";
-import { InvoiceDocument } from "@/components/invoices/invoice-document";
+import { Copy, Loader2, Printer } from "lucide-react";
+import { BookingDocument } from "@/components/docs/booking-document";
 import { Button } from "@/components/ui/button";
 import {
-  fetchInvoiceById,
-  publicInvoicePath,
-  updateInvoiceStatus,
-  type Invoice,
-} from "@/lib/invoices";
-import {
-  invoicePaymentReminderText,
-  invoicePaymentReminderWhatsAppUrl,
-} from "@/lib/payment-reminder";
+  fetchBookingById,
+  publicBookingPath,
+  updateBookingStatus,
+  type Booking,
+} from "@/lib/bookings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export default function InvoiceDetailPage() {
+export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = String(params?.id || "");
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
-  const [reminderCopied, setReminderCopied] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -40,18 +35,18 @@ export default function InvoiceDetailPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      router.replace(`/login?next=/invoices/${id}`);
+      router.replace(`/login?next=/bookings/${id}`);
       return;
     }
-    const result = await fetchInvoiceById(supabase, id, user.id);
-    if (result.error || !result.invoice) {
+    const result = await fetchBookingById(supabase, id, user.id);
+    if (result.error || !result.booking) {
       setError(result.error || "Not found");
       setLoading(false);
       return;
     }
-    setInvoice(result.invoice);
+    setBooking(result.booking);
     setShareUrl(
-      `${window.location.origin}${publicInvoicePath(result.invoice.public_token)}`
+      `${window.location.origin}${publicBookingPath(result.booking.public_token)}`
     );
     setLoading(false);
   }, [id, router]);
@@ -71,42 +66,20 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  async function markPaid() {
-    if (!invoice) return;
+  async function markConfirmed() {
+    if (!booking) return;
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    const res = await updateInvoiceStatus(supabase, invoice.id, user.id, "paid");
+    const res = await updateBookingStatus(supabase, booking.id, user.id, "confirmed");
     if (!res.ok) {
       setError(res.error || "Couldn’t update");
       return;
     }
-    setInvoice({ ...invoice, status: "paid" });
-  }
-
-  function sendPaymentReminder() {
-    if (!invoice || !shareUrl) return;
-    const wa = invoicePaymentReminderWhatsAppUrl({
-      invoice,
-      shareUrl,
-      creatorName: invoice.seller_name,
-    });
-    if (wa) {
-      window.open(wa, "_blank", "noopener,noreferrer");
-      return;
-    }
-    const text = invoicePaymentReminderText({
-      invoice,
-      shareUrl,
-      creatorName: invoice.seller_name,
-    });
-    void navigator.clipboard.writeText(text).then(() => {
-      setReminderCopied(true);
-      setTimeout(() => setReminderCopied(false), 2500);
-    });
+    setBooking({ ...booking, status: "confirmed" });
   }
 
   if (loading) {
@@ -116,13 +89,12 @@ export default function InvoiceDetailPage() {
       </div>
     );
   }
-
-  if (error || !invoice) {
+  if (error || !booking) {
     return (
       <div className="page-shell py-16 text-center">
         <p className="text-sm text-destructive">{error || "Not found"}</p>
         <Button asChild variant="outline" className="mt-4">
-          <Link href="/invoices">Back to invoices</Link>
+          <Link href="/bookings">Back</Link>
         </Button>
       </div>
     );
@@ -130,58 +102,41 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="bg-grid-fade">
-      <div className="page-shell space-y-6 py-8 print:hidden">
+      <div className="page-shell space-y-4 py-8 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-primary">
-              Invoice
+              Booking
             </p>
             <h1 className="text-xl font-semibold text-white">
-              {invoice.invoice_number}
+              {booking.booking_number}
             </h1>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" />
-              Print / PDF
+              <Printer className="h-4 w-4" /> Print / PDF
             </Button>
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
-              <Copy className="h-4 w-4" />
-              {copied ? "Copied" : "Copy share link"}
+              <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy link"}
             </Button>
-            {invoice.status !== "paid" && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={sendPaymentReminder}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  {reminderCopied
-                    ? "Reminder copied"
-                    : invoice.client_phone
-                      ? "Payment reminder"
-                      : "Copy reminder"}
-                </Button>
-                <Button type="button" onClick={() => void markPaid()}>
-                  Mark paid
-                </Button>
-              </>
+            {booking.status !== "confirmed" && (
+              <Button type="button" onClick={() => void markConfirmed()}>
+                Mark confirmed
+              </Button>
             )}
             <Button asChild variant="ghost">
-              <Link href="/invoices">All invoices</Link>
+              <Link href="/bookings">All bookings</Link>
             </Button>
           </div>
         </div>
         {shareUrl && (
-          <p className="break-all rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-[11px] text-white/40">
+          <p className="break-all rounded-xl border border-white/10 px-3 py-2 font-mono text-[11px] text-white/40">
             {shareUrl}
           </p>
         )}
       </div>
-
       <div className="page-shell pb-16 print:max-w-none print:p-0">
-        <InvoiceDocument invoice={invoice} />
+        <BookingDocument booking={booking} />
       </div>
     </div>
   );

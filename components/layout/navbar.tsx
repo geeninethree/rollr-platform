@@ -29,8 +29,9 @@ const publicLinks = [
 const creatorLinks = [
   { href: "/list", label: "List free (alpha)", desc: "Pricing · ₹299/mo later" },
   { href: "/studio", label: "Portfolio", desc: "Build your listing" },
-  { href: "/inbox", label: "Inbox", desc: "Client briefs" },
+  { href: "/tools", label: "Business kit", desc: "Quotes · invoices · more" },
   { href: "/invoices", label: "Invoices", desc: "Bill clients" },
+  { href: "/clients", label: "Clients", desc: "Per-client history" },
 ];
 
 const clientLinks = [
@@ -138,8 +139,17 @@ export function Navbar() {
   const creatorsActive =
     pathname.startsWith("/list") ||
     pathname.startsWith("/studio") ||
-    pathname.startsWith("/inbox") ||
-    pathname.startsWith("/invoices");
+    pathname.startsWith("/tools") ||
+    pathname.startsWith("/invoices") ||
+    pathname.startsWith("/quotes") ||
+    pathname.startsWith("/bookings") ||
+    pathname.startsWith("/rate-cards") ||
+    pathname.startsWith("/delivery") ||
+    pathname.startsWith("/clients") ||
+    pathname.startsWith("/earnings");
+  const inboxActive = pathname.startsWith("/inbox");
+  const isCreator = profileRole === "creator";
+  const showInbox = Boolean(user && (isCreator || pending > 0));
   const hideAuthChrome =
     pathname.startsWith("/login") || pathname.startsWith("/signup");
 
@@ -172,6 +182,32 @@ export function Navbar() {
               );
             })}
 
+            {showInbox && (
+              <Link
+                href="/inbox"
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium whitespace-nowrap pressable transition-product",
+                  inboxActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-white/50 hover:bg-white/[0.06] hover:text-white"
+                )}
+              >
+                Inbox
+                {pending > 0 && (
+                  <span
+                    className={cn(
+                      "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+                      inboxActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-primary text-primary-foreground"
+                    )}
+                  >
+                    {pending}
+                  </span>
+                )}
+              </Link>
+            )}
+
             <div className="relative" ref={creatorsRef}>
               <button
                 type="button"
@@ -186,11 +222,6 @@ export function Navbar() {
                 aria-haspopup="menu"
               >
                 For creators
-                {pending > 0 && (
-                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-                    {pending}
-                  </span>
-                )}
                 <ChevronDown
                   className={cn(
                     "h-3.5 w-3.5 opacity-70 transition-transform",
@@ -216,9 +247,6 @@ export function Navbar() {
                     >
                       <span className="text-sm font-medium text-white">
                         {item.label}
-                        {item.href === "/inbox" && pending > 0
-                          ? ` (${pending})`
-                          : ""}
                       </span>
                       <span className="text-[11px] text-white/40">
                         {item.desc}
@@ -325,6 +353,26 @@ export function Navbar() {
                 </li>
               );
             })}
+            {showInbox && (
+              <li>
+                <Link
+                  href="/inbox"
+                  className={cn(
+                    "flex items-center justify-between rounded-full px-3 py-2.5 text-sm font-medium",
+                    inboxActive
+                      ? "bg-primary/15 text-primary"
+                      : "text-white/55 hover:bg-white/[0.06] hover:text-white"
+                  )}
+                >
+                  Inbox
+                  {pending > 0 && (
+                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                      {pending}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            )}
             <li className="mt-2 border-t border-white/[0.06] pt-2">
               <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-white/30">
                 For creators
@@ -333,14 +381,9 @@ export function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center justify-between rounded-full px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
+                  className="block rounded-full px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
                 >
                   {item.label}
-                  {item.href === "/inbox" && pending > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
-                      {pending}
-                    </span>
-                  )}
                 </Link>
               ))}
               {user &&

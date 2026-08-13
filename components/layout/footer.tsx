@@ -12,6 +12,7 @@ const creatorLinks = [
   { href: "/list", label: "List free (alpha)" },
   { href: "/studio", label: "Portfolio" },
   { href: "/inbox", label: "Inbox" },
+  { href: "/tools", label: "Business kit" },
   { href: "/guides/creators", label: "Creator guide" },
   { href: "/list#join", label: "Register interest" },
 ];
