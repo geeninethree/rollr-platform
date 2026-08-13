@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Loader2, Printer } from "lucide-react";
 import { RateCardDocument } from "@/components/docs/rate-card-document";
+import { ShareWhatsAppButton } from "@/components/docs/share-whatsapp-button";
 import { Button } from "@/components/ui/button";
 import {
   fetchRateCardById,
@@ -100,6 +101,12 @@ export default function RateCardDetailPage() {
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
               <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy public link"}
             </Button>
+            <ShareWhatsAppButton
+              creatorName={card.creator_name}
+              docKind="rate card"
+              shareUrl={shareUrl}
+              label="Share on WhatsApp"
+            />
             <Button asChild variant="ghost">
               <Link href="/rate-cards">All rate cards</Link>
             </Button>

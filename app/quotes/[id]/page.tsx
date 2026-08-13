@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Copy, Loader2, Printer } from "lucide-react";
+import { Copy, FileText, Loader2, Printer } from "lucide-react";
 import { QuoteDocument } from "@/components/docs/quote-document";
+import { ShareWhatsAppButton } from "@/components/docs/share-whatsapp-button";
 import { Button } from "@/components/ui/button";
+import { createInvoice, draftFromQuote } from "@/lib/invoices";
 import {
   fetchQuoteById,
   publicQuotePath,
@@ -20,6 +22,7 @@ export default function QuoteDetailPage() {
   const id = String(params?.id || "");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
+  const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -82,6 +85,33 @@ export default function QuoteDetailPage() {
     setQuote({ ...quote, status });
   }
 
+  async function convertToInvoice() {
+    if (!quote || converting) return;
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    setConverting(true);
+    setError(null);
+    const result = await createInvoice(
+      supabase,
+      user.id,
+      draftFromQuote(quote)
+    );
+    setConverting(false);
+    if (result.error || !result.invoice) {
+      setError(result.error || "Couldn’t create invoice.");
+      return;
+    }
+    // Mark quote accepted when converting
+    if (quote.status !== "accepted") {
+      void updateQuoteStatus(supabase, quote.id, user.id, "accepted");
+    }
+    router.push(`/invoices/${result.invoice.id}`);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
@@ -109,24 +139,51 @@ export default function QuoteDetailPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-primary">
               Quote
             </p>
-            <h1 className="text-xl font-semibold text-white">{quote.quote_number}</h1>
+            <h1 className="text-xl font-semibold text-white">
+              {quote.quote_number}
+            </h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={() => window.print()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.print()}
+            >
               <Printer className="h-4 w-4" /> Print / PDF
             </Button>
-            <Button type="button" variant="outline" onClick={() => void copyLink()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void copyLink()}
+            >
               <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy link"}
             </Button>
+            <ShareWhatsAppButton
+              clientPhone={quote.client_phone}
+              clientName={quote.client_name}
+              creatorName={quote.seller_name}
+              docKind="quote"
+              docNumber={quote.quote_number}
+              shareUrl={shareUrl}
+              amount={quote.total}
+            />
             {quote.status !== "accepted" && (
               <Button type="button" onClick={() => void setStatus("accepted")}>
                 Mark accepted
               </Button>
             )}
-            <Button asChild variant="ghost">
-              <Link href={`/invoices?client=${encodeURIComponent(quote.client_name)}`}>
-                Make invoice
-              </Link>
+            <Button
+              type="button"
+              className="font-semibold"
+              disabled={converting}
+              onClick={() => void convertToInvoice()}
+            >
+              {converting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              Convert to invoice
             </Button>
             <Button asChild variant="ghost">
               <Link href="/quotes">All quotes</Link>

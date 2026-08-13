@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Loader2, Printer } from "lucide-react";
 import { DeliveryDocument } from "@/components/docs/delivery-document";
+import { ShareWhatsAppButton } from "@/components/docs/share-whatsapp-button";
 import { Button } from "@/components/ui/button";
 import {
   fetchDeliveryNoteById,
@@ -100,6 +101,19 @@ export default function DeliveryDetailPage() {
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
               <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy link"}
             </Button>
+            <ShareWhatsAppButton
+              clientPhone={note.client_phone}
+              clientName={note.client_name}
+              creatorName={note.creator_name}
+              docKind="delivery note"
+              docNumber={note.note_number}
+              shareUrl={shareUrl}
+              extraLines={
+                note.access_note
+                  ? [`Access: ${note.access_note}`]
+                  : undefined
+              }
+            />
             <Button asChild variant="ghost">
               <Link href="/delivery">All notes</Link>
             </Button>

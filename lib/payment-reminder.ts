@@ -1,4 +1,5 @@
 import { formatPriceInr, normaliseWhatsApp } from "@/lib/format";
+import { whatsAppShareUrl } from "@/lib/doc-share";
 import type { Invoice } from "@/lib/invoices";
 
 /** Build WhatsApp payment reminder URL for an invoice (creator → client). */
@@ -10,8 +11,7 @@ export function invoicePaymentReminderWhatsAppUrl(input: {
   const phone = input.invoice.client_phone
     ? normaliseWhatsApp(input.invoice.client_phone)
     : "";
-  if (!phone || phone.length < 10) return null;
-
+  // Prefer targeted message; still allow share without phone via generic WA
   const due = input.invoice.due_date
     ? ` Due date: ${input.invoice.due_date}.`
     : "";
@@ -26,7 +26,10 @@ export function invoicePaymentReminderWhatsAppUrl(input: {
       : "Please pay the creator directly (UPI / bank) — ROLLR does not collect payment.",
   ].join(" ");
 
-  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  if (phone && phone.length >= 10) {
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  }
+  return whatsAppShareUrl({ text });
 }
 
 export function invoicePaymentReminderText(input: {

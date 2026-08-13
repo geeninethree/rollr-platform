@@ -173,4 +173,23 @@ export function publicRateCardPath(token: string) {
   return `/r/${token}`;
 }
 
+/** Public profile: latest active rate card for a creator user id. */
+export async function fetchPublicRateCardForCreator(
+  supabase: SupabaseClient,
+  creatorUserId: string
+): Promise<{ card?: RateCard; error?: string }> {
+  const { data, error } = await supabase.rpc(
+    "get_public_rate_card_for_creator",
+    { p_user_id: creatorUserId }
+  );
+  if (error) {
+    // Fallback: try direct select if policy ever allows; usually fails for anon
+    console.warn("[rollr] fetchPublicRateCardForCreator", error.message);
+    return { error: error.message };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return {};
+  return { card: rowToRateCard(row as Record<string, unknown>) };
+}
+
 export { formatDocMoney as formatRateMoney };

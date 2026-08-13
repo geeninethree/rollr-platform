@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Loader2, MessageCircle, Printer } from "lucide-react";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
+import { ShareWhatsAppButton } from "@/components/docs/share-whatsapp-button";
 import { Button } from "@/components/ui/button";
 import {
   fetchInvoiceById,
@@ -16,6 +17,7 @@ import {
   invoicePaymentReminderText,
   invoicePaymentReminderWhatsAppUrl,
 } from "@/lib/payment-reminder";
+import { openWhatsAppShare } from "@/lib/doc-share";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function InvoiceDetailPage() {
@@ -95,7 +97,7 @@ export default function InvoiceDetailPage() {
       creatorName: invoice.seller_name,
     });
     if (wa) {
-      window.open(wa, "_blank", "noopener,noreferrer");
+      openWhatsAppShare(wa);
       return;
     }
     const text = invoicePaymentReminderText({
@@ -149,6 +151,16 @@ export default function InvoiceDetailPage() {
               <Copy className="h-4 w-4" />
               {copied ? "Copied" : "Copy share link"}
             </Button>
+            <ShareWhatsAppButton
+              clientPhone={invoice.client_phone}
+              clientName={invoice.client_name}
+              creatorName={invoice.seller_name}
+              docKind="invoice"
+              docNumber={invoice.invoice_number}
+              shareUrl={shareUrl}
+              amount={invoice.total}
+              label="WhatsApp invoice"
+            />
             {invoice.status !== "paid" && (
               <>
                 <Button
@@ -157,11 +169,7 @@ export default function InvoiceDetailPage() {
                   onClick={sendPaymentReminder}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  {reminderCopied
-                    ? "Reminder copied"
-                    : invoice.client_phone
-                      ? "Payment reminder"
-                      : "Copy reminder"}
+                  {reminderCopied ? "Reminder copied" : "Payment reminder"}
                 </Button>
                 <Button type="button" onClick={() => void markPaid()}>
                   Mark paid

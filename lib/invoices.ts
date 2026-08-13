@@ -122,6 +122,47 @@ export function nextInvoiceNumber(): string {
   return `ROLLR-${y}${m}-${rand}`;
 }
 
+/** Prefill invoice from an existing quote (one-click convert). */
+export function draftFromQuote(quote: {
+  inquiry_id?: string | null;
+  seller_name: string;
+  seller_email?: string | null;
+  seller_phone?: string | null;
+  client_name: string;
+  client_email?: string | null;
+  client_phone?: string | null;
+  line_items: InvoiceLineItem[];
+  gst_percent: number;
+  notes?: string | null;
+  quote_number: string;
+}): CreateInvoiceInput {
+  return {
+    inquiry_id: quote.inquiry_id || null,
+    seller_name: quote.seller_name,
+    seller_email: quote.seller_email || undefined,
+    seller_phone: quote.seller_phone || undefined,
+    client_name: quote.client_name,
+    client_email: quote.client_email || undefined,
+    client_phone: quote.client_phone || undefined,
+    line_items: (quote.line_items || []).map((li) => ({
+      description: li.description,
+      quantity: li.quantity,
+      unit_amount: li.unit_amount,
+    })),
+    gst_percent: quote.gst_percent || 0,
+    notes: [
+      `Converted from quote ${quote.quote_number}`,
+      quote.notes || "",
+    ]
+      .filter(Boolean)
+      .join(" · ")
+      .slice(0, 1000),
+    payment_note:
+      "Pay the creator directly (UPI / bank). ROLLR does not collect payment.",
+    status: "draft",
+  };
+}
+
 export function draftFromInquiry(
   inquiry: Inquiry,
   seller: { name: string; email?: string; phone?: string }

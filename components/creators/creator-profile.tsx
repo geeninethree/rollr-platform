@@ -19,6 +19,7 @@ import { SendBriefButton } from "@/components/inquiry/send-brief-button";
 import { ExternalLinksSection } from "@/components/portfolio/external-links";
 import { ListingStatusBadge } from "@/components/portfolio/listing-status-badge";
 import { PortfolioGallery } from "@/components/portfolio/portfolio-gallery";
+import { ProfileRateCard } from "@/components/creators/profile-rate-card";
 import { ReviewsSection } from "@/components/creators/reviews-section";
 import { ProfileShareCard } from "@/components/share/profile-share-card";
 import {
@@ -316,6 +317,13 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
               mode={tab}
               creatorName={creator.full_name}
             />
+
+            {creator.profile_id && (
+              <ProfileRateCard
+                creatorUserId={creator.profile_id}
+                creatorName={creator.full_name}
+              />
+            )}
 
             <ExternalLinksSection links={creator.links} />
 

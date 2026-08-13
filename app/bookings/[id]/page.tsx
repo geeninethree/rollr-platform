@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Loader2, Printer } from "lucide-react";
 import { BookingDocument } from "@/components/docs/booking-document";
+import { ShareWhatsAppButton } from "@/components/docs/share-whatsapp-button";
 import { Button } from "@/components/ui/button";
 import {
   fetchBookingById,
@@ -119,6 +120,20 @@ export default function BookingDetailPage() {
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
               <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy link"}
             </Button>
+            <ShareWhatsAppButton
+              clientPhone={booking.client_phone}
+              clientName={booking.client_name}
+              creatorName={booking.creator_name}
+              docKind="booking confirmation"
+              docNumber={booking.booking_number}
+              shareUrl={shareUrl}
+              amount={booking.total_amount}
+              extraLines={
+                booking.deposit_amount > 0
+                  ? [`Deposit: ₹${booking.deposit_amount}`]
+                  : undefined
+              }
+            />
             {booking.status !== "confirmed" && (
               <Button type="button" onClick={() => void markConfirmed()}>
                 Mark confirmed
