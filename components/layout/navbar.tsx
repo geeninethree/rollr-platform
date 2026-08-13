@@ -157,7 +157,7 @@ export function Navbar() {
                   className={cn(
                     "rounded-full px-3 py-1.5 text-[13px] font-medium whitespace-nowrap pressable transition-product",
                     active
-                      ? "bg-white text-black"
+                      ? "bg-primary text-primary-foreground"
                       : "text-white/50 hover:bg-white/[0.06] hover:text-white"
                   )}
                 >
@@ -181,7 +181,7 @@ export function Navbar() {
               >
                 For creators
                 {pending > 0 && (
-                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-semibold text-black">
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
                     {pending}
                   </span>
                 )}
@@ -247,9 +247,10 @@ export function Navbar() {
               <Button
                 asChild
                 size="sm"
+                variant="outline"
                 className={cn(
                   "h-9 font-semibold pressable",
-                  onList && "ring-2 ring-white/20"
+                  onList && "ring-2 ring-primary/30"
                 )}
               >
                 <Link href="/signup?role=creator&next=/studio">
@@ -288,7 +289,7 @@ export function Navbar() {
                     className={cn(
                       "block rounded-full px-3 py-2.5 text-sm font-medium",
                       active
-                        ? "bg-white text-black"
+                        ? "bg-primary/15 text-primary"
                         : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                     )}
                   >
@@ -309,7 +310,7 @@ export function Navbar() {
                 >
                   {item.label}
                   {item.href === "/inbox" && pending > 0 && (
-                    <span className="rounded-full bg-white px-1.5 text-[10px] font-semibold text-black">
+                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
                       {pending}
                     </span>
                   )}
@@ -326,7 +327,7 @@ export function Navbar() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-full bg-white px-3 py-2.5 text-center text-sm font-medium text-black"
+                  className="rounded-full bg-primary px-3 py-2.5 text-center text-sm font-medium text-primary-foreground"
                 >
                   Sign up
                 </Link>
@@ -340,7 +341,7 @@ export function Navbar() {
             <li className="mt-2 px-2 pb-1">
               <Link
                 href="/signup?role=creator&next=/studio"
-                className="block rounded-full bg-white px-3 py-2.5 text-center text-sm font-semibold text-black pressable"
+                className="block rounded-full border border-primary/60 px-3 py-2.5 text-center text-sm font-semibold text-primary pressable"
               >
                 List free
               </Link>

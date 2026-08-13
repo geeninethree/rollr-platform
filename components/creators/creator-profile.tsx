@@ -253,14 +253,14 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
         <div className="grid min-w-0 gap-10 lg:grid-cols-[1fr_300px]">
           <div className="min-w-0 space-y-8">
             {canShoot && canEdit && (
-              <div className="inline-flex max-w-full rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
+              <div className="inline-flex max-w-full rounded-full border border-primary/20 bg-primary/[0.06] p-0.5">
                 <button
                   type="button"
                   onClick={() => setTab("shoot")}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-product sm:px-4",
                     tab === "shoot"
-                      ? "bg-white text-black"
+                      ? "bg-primary text-primary-foreground"
                       : "text-white/50 hover:text-white"
                   )}
                 >
@@ -273,7 +273,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-product sm:px-4",
                     tab === "edit"
-                      ? "bg-white text-black"
+                      ? "bg-primary text-primary-foreground"
                       : "text-white/50 hover:text-white"
                   )}
                 >

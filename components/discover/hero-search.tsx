@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Search, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,11 +15,11 @@ import {
 import type { SearchFilters, ServiceMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** Atmosphere stills — CSS background only (contained, no layout stretch) */
+/** Atmosphere stills — next/image for reliable load (not CSS-only) */
 const HERO_SHOOT =
-  "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1600&q=80";
+  "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1600&q=85";
 const HERO_EDIT =
-  "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1600&q=80";
+  "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1600&q=85";
 
 const SHOOT_CHIPS = ["Wedding", "Corporate", "Portraits", "Nightclub"] as const;
 const EDIT_CHIPS = [
@@ -42,9 +43,6 @@ type Suggestion =
   | { kind: "location"; label: string }
   | { kind: "category"; label: string };
 
-/**
- * Discover hero: atmosphere image + command bar (photographers & editors).
- */
 export function HeroSearch({
   mode,
   filters,
@@ -142,40 +140,42 @@ export function HeroSearch({
     <section className="relative w-full min-w-0 max-w-full">
       <div
         className={cn(
-          "w-full min-w-0 overflow-hidden rounded-[var(--radius-lg)] border border-white/[0.08]",
-          "bg-[hsl(var(--surface-1))] shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)]"
+          "w-full min-w-0 overflow-hidden rounded-[var(--radius-lg)]",
+          "border border-primary/15 bg-[hsl(var(--surface-1))]",
+          "shadow-[0_24px_80px_-28px_rgba(0,0,0,0.9),0_0_0_1px_hsl(42_40%_40%/0.06)]"
         )}
       >
         <div className="grid min-w-0 lg:grid-cols-2">
-          {/* Atmosphere still — fixed height, CSS cover only */}
-          <div
-            className="media-frame relative h-[200px] w-full max-h-[40vh] min-h-[180px] sm:h-[320px] sm:max-h-[48vh] lg:h-[420px] lg:max-h-none"
-            role="img"
-            aria-label={isEdit ? "Editor workspace" : "Photography"}
-            style={{
-              backgroundColor: "hsl(240 5% 8%)",
-              backgroundImage: `url(${heroUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }}
-          >
+          {/* Real next/image still — reliable, visible */}
+          <div className="media-frame relative h-[220px] w-full min-h-[200px] sm:h-[340px] lg:h-[440px] lg:min-h-full">
+            <Image
+              src={heroUrl}
+              alt={isEdit ? "Editor workspace" : "Photography"}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
+            {/* Light film grade — keep image visible, soft blend to panel */}
             <div
               className="pointer-events-none absolute inset-0 z-[1]"
               style={{
                 background: [
-                  "linear-gradient(to right, transparent 45%, hsl(240 5% 7% / 0.92) 100%)",
-                  "linear-gradient(to top, hsl(240 5% 7% / 0.5) 0%, transparent 50%)",
-                  "linear-gradient(to bottom, hsl(0 0% 0% / 0.2) 0%, transparent 35%)",
+                  "linear-gradient(to right, transparent 50%, hsl(240 5% 7% / 0.55) 100%)",
+                  "linear-gradient(to top, hsl(240 5% 6% / 0.35) 0%, transparent 45%)",
+                  "linear-gradient(to bottom, hsl(42 40% 20% / 0.12) 0%, transparent 40%)",
                 ].join(", "),
               }}
             />
+            <div className="absolute bottom-3 left-3 z-[2] rounded-full border border-primary/30 bg-black/45 px-3 py-1 text-[11px] font-medium text-primary backdrop-blur-md sm:bottom-4 sm:left-4">
+              {isEdit ? "Edit · post" : "Shoot · coverage"}
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-col justify-center gap-5 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10 lg:min-h-[420px] lg:px-10">
+          <div className="flex min-w-0 flex-col justify-center gap-5 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10 lg:min-h-[440px] lg:px-10">
             <div className="space-y-3">
               <div
-                className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
+                className="inline-flex rounded-full border border-primary/20 bg-primary/[0.06] p-0.5 text-xs font-medium"
                 role="tablist"
               >
                 <Link
@@ -183,8 +183,8 @@ export function HeroSearch({
                   className={cn(
                     "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
                     !isEdit
-                      ? "bg-white text-black"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                      : "text-white/55 hover:text-white"
                   )}
                 >
                   Photographers
@@ -194,8 +194,8 @@ export function HeroSearch({
                   className={cn(
                     "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
                     isEdit
-                      ? "bg-white text-black"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                      : "text-white/55 hover:text-white"
                   )}
                 >
                   Editors
@@ -205,10 +205,11 @@ export function HeroSearch({
               <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-[2.5rem] lg:text-[2.75rem]">
                 {isEdit ? "Find an editor" : "Find a photographer"}
               </h1>
-              <p className="text-[15px] text-white/45">
-                Mumbai · 0% commission
+              <p className="text-[15px] text-white/50">
+                Mumbai ·{" "}
+                <span className="text-primary/90">0% commission</span>
                 <span className="mx-2 text-white/20">·</span>
-                <span className="text-white/35">
+                <span className="text-white/40">
                   {loading ? "Loading…" : `${resultCount} live`}
                 </span>
               </p>
@@ -216,7 +217,7 @@ export function HeroSearch({
 
             <div className="space-y-3">
               <div className="relative" ref={wrapRef}>
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-white/30" />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-primary/50" />
                 <Input
                   value={filters.query}
                   onChange={(e) => {
@@ -251,11 +252,11 @@ export function HeroSearch({
                       ? "Search editors, reels, colour…"
                       : "Search area, wedding, corporate…"
                   }
-                  className="h-12 border-white/[0.08] bg-black/35 pl-10 text-[15px] placeholder:text-white/30 sm:h-11"
+                  className="h-12 border-primary/15 bg-black/40 pl-10 text-[15px] placeholder:text-white/30 focus-visible:ring-primary/40 sm:h-11"
                   autoComplete="off"
                 />
                 {suggestOpen && suggestions.length > 0 && (
-                  <ul className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-auto rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/60 backdrop-blur-xl">
+                  <ul className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-auto rounded-2xl border border-primary/15 bg-[#141416]/98 py-1 shadow-2xl shadow-black/60 backdrop-blur-xl">
                     {suggestions.map((s, i) => (
                       <li key={`${s.kind}-${s.label}`}>
                         <button
@@ -263,16 +264,16 @@ export function HeroSearch({
                           className={cn(
                             "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm",
                             i === highlight
-                              ? "bg-white/[0.08] text-white"
+                              ? "bg-primary/15 text-white"
                               : "text-white/70 hover:bg-white/[0.04]"
                           )}
                           onMouseEnter={() => setHighlight(i)}
                           onClick={() => applySuggestion(s)}
                         >
                           {s.kind === "location" ? (
-                            <MapPin className="h-3.5 w-3.5 text-white/35" />
+                            <MapPin className="h-3.5 w-3.5 text-primary/70" />
                           ) : (
-                            <Tag className="h-3.5 w-3.5 text-white/35" />
+                            <Tag className="h-3.5 w-3.5 text-primary/70" />
                           )}
                           {s.label}
                         </button>
@@ -289,10 +290,10 @@ export function HeroSearch({
                       key={loc}
                       type="button"
                       onClick={() => removeLocation(loc)}
-                      className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/80"
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] text-primary"
                     >
                       {loc}
-                      <X className="h-3 w-3 opacity-60" />
+                      <X className="h-3 w-3 opacity-70" />
                     </button>
                   ))}
                 </div>
@@ -306,7 +307,12 @@ export function HeroSearch({
                       key={id}
                       type="button"
                       onClick={() => toggleCategory(id)}
-                      className={cn("chip", selected && "chip-active")}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-product",
+                        selected
+                          ? "border-primary/50 bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                          : "border-white/10 bg-white/[0.03] text-white/55 hover:border-primary/30 hover:text-white/85"
+                      )}
                     >
                       {id}
                     </button>
@@ -316,7 +322,7 @@ export function HeroSearch({
                   <button
                     type="button"
                     onClick={onClear}
-                    className="text-xs font-medium text-white/40 hover:text-white/70"
+                    className="text-xs font-medium text-primary/70 hover:text-primary"
                   >
                     Clear
                   </button>
@@ -328,6 +334,7 @@ export function HeroSearch({
                   type="button"
                   onClick={onSearch}
                   size="lg"
+                  variant="gold"
                   className="h-11 rounded-full px-8 font-semibold"
                 >
                   {loading
@@ -345,16 +352,17 @@ export function HeroSearch({
   );
 }
 
-/** Quiet creator CTA */
 export function CreatorSignupBand() {
   return (
-    <div className="flex flex-col items-start justify-between gap-4 rounded-[var(--radius-lg)] border border-white/[0.06] bg-white/[0.02] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+    <div className="flex flex-col items-start justify-between gap-4 rounded-[var(--radius-lg)] border border-primary/20 bg-gradient-to-br from-primary/[0.1] via-transparent to-transparent px-5 py-4 sm:flex-row sm:items-center sm:px-6">
       <div className="min-w-0 space-y-0.5">
         <p className="text-sm font-medium text-white/90">
           Photographers &amp; editors
         </p>
-        <p className="text-sm text-white/40">
-          List free in alpha · ₹299/mo when billing starts · 0% commission
+        <p className="text-sm text-white/45">
+          List free in alpha ·{" "}
+          <span className="text-primary">₹299/mo</span> when billing starts · 0%
+          commission
         </p>
       </div>
       <Button asChild variant="outline" size="sm" className="shrink-0 font-semibold">

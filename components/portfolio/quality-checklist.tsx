@@ -29,14 +29,14 @@ export function QualityChecklist({ creator, score }: QualityChecklistProps) {
         <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-white/35">
           Quality
         </p>
-        <p className="text-sm font-semibold tabular-nums text-white/80">
+        <p className="text-sm font-semibold tabular-nums text-primary">
           {score}
           <span className="text-white/30">/100</span>
         </p>
       </div>
       <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
         <div
-          className="h-full rounded-full bg-white transition-all duration-500 ease-[var(--ease-out-expo)]"
+          className="h-full rounded-full bg-primary transition-all duration-500 ease-[var(--ease-out-expo)]"
           style={{ width: `${Math.min(100, score)}%` }}
         />
       </div>
@@ -44,7 +44,7 @@ export function QualityChecklist({ creator, score }: QualityChecklistProps) {
         {checks.map((c) => (
           <li key={c.id} className="flex items-start gap-2 text-xs">
             {c.ok ? (
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/70" />
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             ) : (
               <Circle
                 className={cn(

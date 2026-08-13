@@ -447,7 +447,7 @@ export default function StudioPage() {
 
         <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
           <div
-            className="h-full rounded-full bg-white transition-all duration-500 ease-[var(--ease-out-expo)]"
+            className="h-full rounded-full bg-primary transition-all duration-500 ease-[var(--ease-out-expo)]"
             style={{
               width: `${Math.round((completedCount / requiredSteps) * 100)}%`,
             }}
@@ -589,7 +589,7 @@ export default function StudioPage() {
                             className={cn(
                               "rounded-full border px-3 py-1.5 text-xs font-medium",
                               draft.service_modes.includes(m)
-                                ? "border-transparent bg-white text-black"
+                                ? "border-primary/50 bg-primary text-primary-foreground"
                                 : "border-white/10 bg-transparent text-white/50"
                             )}
                           >
@@ -611,7 +611,7 @@ export default function StudioPage() {
                             className={cn(
                               "rounded-md px-2 py-0.5 text-[11px] font-medium",
                               draft.sub_regions.includes(loc)
-                                ? "bg-white text-black"
+                                ? "bg-primary text-primary-foreground"
                                 : "bg-white/[0.06] text-white/50"
                             )}
                           >
@@ -633,7 +633,7 @@ export default function StudioPage() {
                             className={cn(
                               "rounded-md px-2 py-0.5 text-[11px] font-medium",
                               draft.categories.includes(cat)
-                                ? "bg-white text-black"
+                                ? "bg-primary text-primary-foreground"
                                 : "bg-white/[0.06] text-white/50"
                             )}
                           >

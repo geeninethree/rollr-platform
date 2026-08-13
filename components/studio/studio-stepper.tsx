@@ -32,10 +32,11 @@ export function StudioStepper({ current, draft, onSelect }: StudioStepperProps) 
                 onClick={() => onSelect(step.id)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-product",
-                  active && "border-transparent bg-white text-black",
+                  active &&
+                    "border-primary/50 bg-primary text-primary-foreground",
                   !active &&
                     done &&
-                    "border-white/15 bg-white/[0.06] text-white/80",
+                    "border-primary/30 bg-primary/10 text-primary",
                   !active &&
                     !done &&
                     "border-white/10 bg-transparent text-white/40",
@@ -64,13 +65,13 @@ export function StudioStepper({ current, draft, onSelect }: StudioStepperProps) 
                 onClick={() => onSelect(step.id)}
                 className={cn(
                   "flex w-full flex-col gap-1 rounded-2xl border px-2.5 py-2.5 text-left transition-product",
-                  active && "border-white/15 bg-white/[0.08]",
+                  active && "border-primary/40 bg-primary/12",
                   !active &&
                     done &&
-                    "border-white/[0.06] bg-white/[0.03] hover:border-white/12",
+                    "border-primary/20 bg-primary/[0.06] hover:border-primary/35",
                   !active &&
                     !done &&
-                    "border-white/[0.04] bg-transparent hover:border-white/10",
+                    "border-white/[0.06] bg-transparent hover:border-white/12",
                   hasIssue && !active && "border-destructive/30 bg-destructive/5"
                 )}
               >
@@ -78,8 +79,8 @@ export function StudioStepper({ current, draft, onSelect }: StudioStepperProps) 
                   <span
                     className={cn(
                       "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold",
-                      active && "bg-white text-black",
-                      !active && done && "bg-white/15 text-white/80",
+                      active && "bg-primary text-primary-foreground",
+                      !active && done && "bg-primary/25 text-primary",
                       !active && !done && "bg-white/[0.06] text-white/40",
                       hasIssue && !active && "bg-destructive/20 text-destructive"
                     )}
