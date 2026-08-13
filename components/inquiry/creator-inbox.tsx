@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CheckCircle2,
   ExternalLink,
+  FileText,
   Inbox,
   Loader2,
   MessageCircle,
@@ -148,6 +149,10 @@ export function CreatorInbox() {
       return;
     }
     await refresh();
+  }
+
+  function openInvoice(inquiry: Inquiry) {
+    window.location.href = `/invoices?inquiry=${encodeURIComponent(inquiry.id)}`;
   }
 
   async function requestReview(inquiry: Inquiry) {
@@ -325,10 +330,18 @@ export function CreatorInbox() {
                         >
                           Job done · request review
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openInvoice(inquiry)}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Invoice
+                        </Button>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        After the job, request a review — link copies + opens WA
-                        so ratings stay on ROLLR (not only in WhatsApp chat).
+                        After the job: request a review or generate an invoice
+                        for the client.
                       </p>
                     </div>
                   )}

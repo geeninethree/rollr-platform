@@ -30,6 +30,11 @@ const creatorLinks = [
   { href: "/list", label: "List free (alpha)", desc: "Pricing · ₹299/mo later" },
   { href: "/studio", label: "Portfolio", desc: "Build your listing" },
   { href: "/inbox", label: "Inbox", desc: "Client briefs" },
+  { href: "/invoices", label: "Invoices", desc: "Bill clients" },
+];
+
+const clientLinks = [
+  { href: "/my-briefs", label: "My briefs", desc: "What you sent" },
 ];
 
 export function Navbar() {
@@ -133,7 +138,8 @@ export function Navbar() {
   const creatorsActive =
     pathname.startsWith("/list") ||
     pathname.startsWith("/studio") ||
-    pathname.startsWith("/inbox");
+    pathname.startsWith("/inbox") ||
+    pathname.startsWith("/invoices");
   const hideAuthChrome =
     pathname.startsWith("/login") || pathname.startsWith("/signup");
 
@@ -203,22 +209,43 @@ export function Navbar() {
                       href={item.href}
                       role="menuitem"
                       className={cn(
-                        "flex flex-col px-3 py-2.5 transition-colors hover:bg-secondary",
-                        pathname.startsWith(item.href) && "bg-secondary/80"
+                        "flex flex-col px-3 py-2.5 transition-colors hover:bg-white/[0.06]",
+                        pathname.startsWith(item.href) && "bg-white/[0.06]"
                       )}
                       onClick={() => setCreatorsOpen(false)}
                     >
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-white">
                         {item.label}
                         {item.href === "/inbox" && pending > 0
                           ? ` (${pending})`
                           : ""}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[11px] text-white/40">
                         {item.desc}
                       </span>
                     </Link>
                   ))}
+                  {user && (
+                    <>
+                      <div className="my-1 border-t border-white/[0.06]" />
+                      {clientLinks.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          role="menuitem"
+                          className="flex flex-col px-3 py-2.5 transition-colors hover:bg-white/[0.06]"
+                          onClick={() => setCreatorsOpen(false)}
+                        >
+                          <span className="text-sm font-medium text-white">
+                            {item.label}
+                          </span>
+                          <span className="text-[11px] text-white/40">
+                            {item.desc}
+                          </span>
+                        </Link>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -316,6 +343,16 @@ export function Navbar() {
                   )}
                 </Link>
               ))}
+              {user &&
+                clientLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="block rounded-full px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
             </li>
             {!user && (
               <li className="mt-2 grid grid-cols-2 gap-2 border-t border-white/[0.06] px-2 pt-2">

@@ -193,6 +193,29 @@ export async function fetchInquiriesForCreator(
   return { items: (data || []).map((r) => rowToInquiry(r as Record<string, unknown>)) };
 }
 
+/** Briefs the signed-in client sent (client_user_id). */
+export async function fetchMySentBriefs(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ items: Inquiry[]; error?: string }> {
+  const { data, error } = await supabase
+    .from("inquiries")
+    .select("*")
+    .eq("client_user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("[rollr] fetchMySentBriefs", error.message);
+    return {
+      items: [],
+      error: "Couldn’t load your briefs. Try again.",
+    };
+  }
+  return {
+    items: (data || []).map((r) => rowToInquiry(r as Record<string, unknown>)),
+  };
+}
+
 /** Load all inquiries for the signed-in creator (any of their listing ids). */
 export async function fetchMyInquiries(
   supabase: SupabaseClient,
