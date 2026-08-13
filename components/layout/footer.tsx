@@ -9,7 +9,7 @@ const clientLinks = [
 ];
 
 const creatorLinks = [
-  { href: "/list", label: "List for ₹299/mo" },
+  { href: "/list", label: "List free (alpha)" },
   { href: "/studio", label: "Portfolio" },
   { href: "/inbox", label: "Inbox" },
   { href: "/guides/creators", label: "Creator guide" },
@@ -24,13 +24,13 @@ const legalLinks = [
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-border bg-card/20">
-      <div className="page-shell grid gap-10 py-12 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
+    <footer className="mt-auto border-t border-white/[0.05]">
+      <div className="page-shell grid gap-10 py-14 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
         <div className="max-w-sm space-y-3">
           <Logo size="lg" />
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-relaxed text-white/40">
             Mumbai directory for photographers, videographers, and editors.
-            Clients browse. Creators list for ₹299/mo with 0% commission.
+            0% commission. List free in alpha.
           </p>
         </div>
 

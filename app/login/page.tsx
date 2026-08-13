@@ -25,21 +25,23 @@ export default async function LoginPage({ searchParams }: PageProps) {
     : null;
 
   return (
-    <div className="bg-grid-fade">
-      <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12 sm:px-6">
+    <div className="bg-grid-fade min-h-[70vh]">
+      <div className="mx-auto flex max-w-md flex-col gap-8 px-4 py-16 sm:px-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <Logo href="/" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sign in to send briefs or manage your creator listing.
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
+              Welcome back
+            </h1>
+            <p className="mt-1.5 text-sm text-white/40">
+              Sign in to send briefs or manage your listing.
             </p>
           </div>
         </div>
 
-        <Card className="border-border bg-card/90 shadow-lg shadow-black/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Sign in</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-white">Sign in</CardTitle>
           </CardHeader>
           <CardContent>
             {errorMsg && (

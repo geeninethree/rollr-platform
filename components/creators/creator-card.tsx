@@ -59,10 +59,11 @@ export function CreatorCard({
     <Link
       href={profileHref}
       className={cn(
-        "group relative block min-w-0 overflow-hidden rounded-[1.25rem] border border-white/[0.06] bg-[#111113]",
-        "shadow-[0_20px_50px_-28px_rgba(0,0,0,0.85)] transition-all duration-500",
-        "hover:-translate-y-1 hover:border-white/[0.12] hover:shadow-[0_28px_60px_-24px_rgba(0,0,0,0.95)]",
-        "animate-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "group relative block min-w-0 overflow-hidden rounded-[var(--radius-lg)] border border-white/[0.06] bg-[hsl(var(--surface-1))]",
+        "shadow-[0_24px_56px_-30px_rgba(0,0,0,0.9)] transition-product",
+        "hover:border-white/[0.12] hover:shadow-[0_32px_64px_-28px_rgba(0,0,0,0.95)]",
+        "motion-safe:hover:-translate-y-0.5",
+        "animate-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30",
         delay
       )}
     >
@@ -71,7 +72,7 @@ export function CreatorCard({
           src={cover}
           alt={`${creator.full_name} portfolio`}
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-          imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+          imageClassName="transition-transform duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.03]"
         />
         {/* Soft film grade */}
         <div

@@ -72,7 +72,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
 
   return (
     <div className="bg-grid-fade">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="page-shell py-6 sm:py-8">
         <Button
           asChild
           variant="ghost"
@@ -253,15 +253,15 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
         <div className="grid min-w-0 gap-10 lg:grid-cols-[1fr_300px]">
           <div className="min-w-0 space-y-8">
             {canShoot && canEdit && (
-              <div className="inline-flex max-w-full rounded-full border border-border bg-card p-1">
+              <div className="inline-flex max-w-full rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
                 <button
                   type="button"
                   onClick={() => setTab("shoot")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors sm:px-4",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-product sm:px-4",
                     tab === "shoot"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:text-white"
                   )}
                 >
                   <Video className="h-3.5 w-3.5" />
@@ -271,10 +271,10 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                   type="button"
                   onClick={() => setTab("edit")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors sm:px-4",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-product sm:px-4",
                     tab === "edit"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:text-white"
                   )}
                 >
                   <Clapperboard className="h-3.5 w-3.5" />
@@ -403,18 +403,28 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
         </div>
       </div>
 
-      {/* Mobile sticky hire CTA */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
-        <SendBriefButton
-          creator={creator}
-          surface={tab}
-          defaultBriefType={defaultBriefType}
-          size="lg"
-          className="h-12 w-full font-semibold"
-          label="Send brief"
-        />
+      {/* Mobile sticky hire — floating capsule matching nav chrome */}
+      <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+        <div className="page-shell !px-0">
+          <div className="chrome-float mx-auto flex max-w-lg items-center gap-3 rounded-2xl p-2 pl-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] text-white/40">From</p>
+              <p className="truncate text-sm font-semibold text-gold">
+                {priceLabelFrom(price)}
+              </p>
+            </div>
+            <SendBriefButton
+              creator={creator}
+              surface={tab}
+              defaultBriefType={defaultBriefType}
+              size="default"
+              className="h-11 shrink-0 px-6 font-semibold"
+              label="Send brief"
+            />
+          </div>
+        </div>
       </div>
-      <div className="h-20 lg:hidden" aria-hidden />
+      <div className="h-24 lg:hidden" aria-hidden />
     </div>
   );
 }

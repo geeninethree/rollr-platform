@@ -422,19 +422,19 @@ export default function StudioPage() {
 
   return (
     <div className="bg-grid-fade">
-      <div className="mx-auto max-w-6xl min-w-0 space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="page-shell min-w-0 space-y-8 pb-20 pt-8 sm:pt-10">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 space-y-2">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
-              Creator portfolio
+            <p className="text-[13px] font-medium uppercase tracking-[0.14em] text-white/35">
+              Portfolio
             </p>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-white sm:text-3xl">
               Build your listing
             </h1>
-            <p className="max-w-xl text-sm text-muted-foreground">
+            <p className="max-w-xl text-sm text-white/40">
               Step {currentMeta.number} of {STUDIO_STEPS.length} ·{" "}
-              {completedCount}/{requiredSteps} required sections complete
+              {completedCount}/{requiredSteps} complete
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -445,16 +445,13 @@ export default function StudioPage() {
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="space-y-1.5">
-          <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              style={{
-                width: `${Math.round((completedCount / requiredSteps) * 100)}%`,
-              }}
-            />
-          </div>
+        <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
+          <div
+            className="h-full rounded-full bg-white transition-all duration-500 ease-[var(--ease-out-expo)]"
+            style={{
+              width: `${Math.round((completedCount / requiredSteps) * 100)}%`,
+            }}
+          />
         </div>
 
         {/* Stepper */}
@@ -479,13 +476,15 @@ export default function StudioPage() {
         <div className="grid min-w-0 gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           {/* Active step */}
           <div className="min-w-0 space-y-4">
-            <Card className="border-border bg-card/80 overflow-hidden">
-              <CardHeader className="space-y-1 pb-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+            <Card className="overflow-hidden">
+              <CardHeader className="space-y-1">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/35">
                   Step {currentMeta.number}
                 </p>
-                <CardTitle className="text-lg">{currentMeta.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <CardTitle className="text-lg text-white">
+                  {currentMeta.title}
+                </CardTitle>
+                <p className="text-sm text-white/40">
                   {currentMeta.description}
                 </p>
               </CardHeader>
@@ -590,8 +589,8 @@ export default function StudioPage() {
                             className={cn(
                               "rounded-full border px-3 py-1.5 text-xs font-medium",
                               draft.service_modes.includes(m)
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border bg-secondary text-muted-foreground"
+                                ? "border-transparent bg-white text-black"
+                                : "border-white/10 bg-transparent text-white/50"
                             )}
                           >
                             {m === "shoot"
@@ -612,8 +611,8 @@ export default function StudioPage() {
                             className={cn(
                               "rounded-md px-2 py-0.5 text-[11px] font-medium",
                               draft.sub_regions.includes(loc)
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-secondary text-muted-foreground"
+                                ? "bg-white text-black"
+                                : "bg-white/[0.06] text-white/50"
                             )}
                           >
                             {loc}
@@ -634,8 +633,8 @@ export default function StudioPage() {
                             className={cn(
                               "rounded-md px-2 py-0.5 text-[11px] font-medium",
                               draft.categories.includes(cat)
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-secondary text-muted-foreground"
+                                ? "bg-white text-black"
+                                : "bg-white/[0.06] text-white/50"
                             )}
                           >
                             {cat}

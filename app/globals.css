@@ -35,18 +35,34 @@
     --border: 240 4% 16%;
     --input: 240 4% 14%;
     --ring: 42 55% 58%;
-    --radius: 0.75rem;
+    /* Elite radius ladder: sm 10 / md 16 / lg 20 / full */
+    --radius: 1rem;
+    --radius-sm: 0.625rem;
+    --radius-lg: 1.25rem;
 
     /* Solid white CTA tokens */
     --cta: 0 0% 98%;
     --cta-foreground: 0 0% 4%;
 
-    /* Type ramp — Apple-like system sans (Geist / SF Pro energy) */
+    /* Elevation surfaces (dark mode stack) */
+    --surface-0: 240 6% 4%;
+    --surface-1: 240 5% 7%;
+    --surface-2: 240 5% 9%;
+    --surface-3: 240 4% 12%;
+    --hairline: 0 0% 100% / 0.06;
+    --hairline-strong: 0 0% 100% / 0.1;
+
+    /* Type ramp */
     --text-overline: 0.6875rem;
     --text-body: 0.875rem;
     --text-body-lg: 0.9375rem;
     --text-title: 1.125rem;
-    --text-display: clamp(1.75rem, 3vw, 2.5rem);
+    --text-display: clamp(1.85rem, 3.2vw, 2.75rem);
+
+    /* Motion */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-med: 220ms;
   }
 
   .dark {
@@ -195,23 +211,53 @@
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
+  /* Quiet page atmosphere — less haze noise */
   .bg-grid-fade {
     background-image:
       radial-gradient(
-        ellipse 90% 55% at 50% -5%,
-        hsl(0 0% 18% / 0.55),
-        transparent 60%
+        ellipse 80% 50% at 50% -8%,
+        hsl(0 0% 16% / 0.45),
+        transparent 58%
       ),
       radial-gradient(
-        ellipse 45% 40% at 85% 30%,
-        hsl(43 74% 49% / 0.06),
-        transparent 55%
-      ),
-      radial-gradient(
-        ellipse 40% 35% at 10% 70%,
-        hsl(230 25% 20% / 0.25),
+        ellipse 40% 35% at 90% 20%,
+        hsl(42 50% 40% / 0.05),
         transparent 50%
       );
+  }
+
+  /* Elite surface: settings / form groups */
+  .surface-panel {
+    @apply relative overflow-hidden rounded-[var(--radius-lg)] border border-white/[0.06] bg-[hsl(var(--surface-2))];
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.04),
+      0 20px 50px -32px rgba(0, 0, 0, 0.85);
+  }
+
+  .surface-panel-header {
+    @apply border-b border-white/[0.05] px-5 py-4 sm:px-6;
+  }
+
+  .surface-panel-body {
+    @apply px-5 py-5 sm:px-6 sm:py-5;
+  }
+
+  /* Selection = white (gold is scarce) */
+  .chip {
+    @apply inline-flex items-center justify-center rounded-full border border-white/[0.1] bg-transparent px-3.5 py-1.5 text-xs font-medium text-white/55 transition-all;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out-expo);
+  }
+  .chip:hover {
+    @apply border-white/20 text-white/90;
+  }
+  .chip-active {
+    @apply border-transparent bg-white text-black;
+  }
+
+  /* Floating chrome (nav, sticky CTA) */
+  .chrome-float {
+    @apply border border-white/[0.08] bg-black/75 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.85)] backdrop-blur-2xl;
   }
 
   .bg-noise {
@@ -252,7 +298,13 @@
   }
 
   .animate-rise {
-    animation: rise 0.5s ease-out both;
+    animation: rise var(--duration-med) var(--ease-out-expo) both;
+  }
+
+  .transition-product {
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: var(--duration-med);
+    transition-timing-function: var(--ease-out-expo);
   }
 
   .animate-rise-delay-1 {

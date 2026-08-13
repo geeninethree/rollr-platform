@@ -58,31 +58,31 @@ export default async function SignupPage({ searchParams }: PageProps) {
         : undefined;
 
   return (
-    <div className="bg-grid-fade">
-      <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12 sm:px-6">
+    <div className="bg-grid-fade min-h-[70vh]">
+      <div className="mx-auto flex max-w-md flex-col gap-8 px-4 py-16 sm:px-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <Logo href="/" size="lg" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
               {asCreator
                 ? "Sign up as creator"
                 : asRecruiter
                   ? "Sign up as recruiter"
                   : "Create your account"}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1.5 text-sm text-white/40">
               {asCreator
-                ? "Build your portfolio and list for ₹299/mo — 0% commission."
+                ? "List free in alpha · 0% commission on every job."
                 : asRecruiter
-                  ? "Post multiple open jobs · ₹399/mo when billing is live."
+                  ? "Post multiple open jobs · multi-job when live."
                   : "Client · creator · or recruiter — pick your path."}
             </p>
           </div>
         </div>
 
-        <Card className="border-border bg-card/90 shadow-lg shadow-black/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Sign up</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-white">Sign up</CardTitle>
           </CardHeader>
           <CardContent>
             <AuthForm

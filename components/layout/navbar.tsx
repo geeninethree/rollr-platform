@@ -139,10 +139,9 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 pt-3 sm:pt-4">
-      {/* Floating capsule — same max width as page content */}
       <div className="page-shell">
-      <div className="flex h-12 w-full items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-black/75 px-2.5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:h-14 sm:gap-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+      <div className="chrome-float flex h-12 w-full items-center justify-between gap-2 rounded-full px-2.5 sm:h-14 sm:gap-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <Logo size="sm" />
 
           <nav
@@ -156,10 +155,10 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors whitespace-nowrap pressable",
+                    "rounded-full px-3 py-1.5 text-[13px] font-medium whitespace-nowrap pressable transition-product",
                     active
                       ? "bg-white text-black"
-                      : "text-white/55 hover:bg-white/[0.06] hover:text-white"
+                      : "text-white/50 hover:bg-white/[0.06] hover:text-white"
                   )}
                 >
                   {link.label}
@@ -172,17 +171,17 @@ export function Navbar() {
                 type="button"
                 onClick={() => setCreatorsOpen((v) => !v)}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors pressable",
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium pressable transition-product",
                   creatorsActive || creatorsOpen
                     ? "bg-white/[0.08] text-white"
-                    : "text-white/55 hover:bg-white/[0.06] hover:text-white"
+                    : "text-white/50 hover:bg-white/[0.06] hover:text-white"
                 )}
                 aria-expanded={creatorsOpen}
                 aria-haspopup="menu"
               >
                 For creators
                 {pending > 0 && (
-                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-semibold text-black">
                     {pending}
                   </span>
                 )}
@@ -196,7 +195,7 @@ export function Navbar() {
               {creatorsOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-xl shadow-black/40 animate-rise"
+                  className="absolute left-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/50 backdrop-blur-xl animate-rise"
                 >
                   {creatorLinks.map((item) => (
                     <Link
@@ -248,10 +247,9 @@ export function Navbar() {
               <Button
                 asChild
                 size="sm"
-                variant="outline"
                 className={cn(
-                  "font-semibold pressable",
-                  onList && "ring-2 ring-primary/30"
+                  "h-9 font-semibold pressable",
+                  onList && "ring-2 ring-white/20"
                 )}
               >
                 <Link href="/signup?role=creator&next=/studio">
@@ -263,7 +261,7 @@ export function Navbar() {
           )}
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-foreground transition-colors hover:bg-white/[0.08] pressable md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-white/80 transition-colors hover:bg-white/[0.08] pressable md:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
@@ -279,8 +277,8 @@ export function Navbar() {
           className="page-shell mt-2 pb-3 md:hidden animate-rise"
           aria-label="Mobile"
         >
-        <div className="rounded-2xl border border-white/[0.08] bg-black/90 py-2 backdrop-blur-xl">
-          <ul className="flex flex-col gap-1">
+        <div className="chrome-float rounded-2xl py-2">
+          <ul className="flex flex-col gap-0.5 px-1">
             {publicLinks.map((link) => {
               const active = link.match(pathname);
               return (
@@ -288,10 +286,10 @@ export function Navbar() {
                   <Link
                     href={link.href}
                     className={cn(
-                      "block rounded-md px-3 py-2.5 text-sm font-medium",
+                      "block rounded-full px-3 py-2.5 text-sm font-medium",
                       active
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                        ? "bg-white text-black"
+                        : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                     )}
                   >
                     {link.label}
@@ -299,19 +297,19 @@ export function Navbar() {
                 </li>
               );
             })}
-            <li className="mt-2 border-t border-border pt-2">
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <li className="mt-2 border-t border-white/[0.06] pt-2">
+              <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-white/30">
                 For creators
               </p>
               {creatorLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  className="flex items-center justify-between rounded-full px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
                 >
                   {item.label}
                   {item.href === "/inbox" && pending > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                    <span className="rounded-full bg-white px-1.5 text-[10px] font-semibold text-black">
                       {pending}
                     </span>
                   )}
@@ -319,32 +317,32 @@ export function Navbar() {
               ))}
             </li>
             {!user && (
-              <li className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-2">
+              <li className="mt-2 grid grid-cols-2 gap-2 border-t border-white/[0.06] px-2 pt-2">
                 <Link
                   href="/login"
-                  className="rounded-md border border-border px-3 py-2.5 text-center text-sm font-medium"
+                  className="rounded-full border border-white/10 px-3 py-2.5 text-center text-sm font-medium text-white/80"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-md bg-secondary px-3 py-2.5 text-center text-sm font-medium"
+                  className="rounded-full bg-white px-3 py-2.5 text-center text-sm font-medium text-black"
                 >
                   Sign up
                 </Link>
               </li>
             )}
             {user && (
-              <li className="mt-2 border-t border-border px-3 pt-2 text-sm text-muted-foreground">
-                Signed in as {profileName}
+              <li className="mt-2 border-t border-white/[0.06] px-3 pt-2 text-sm text-white/40">
+                {profileName}
               </li>
             )}
-            <li className="mt-2 px-2">
+            <li className="mt-2 px-2 pb-1">
               <Link
                 href="/signup?role=creator&next=/studio"
-                className="block rounded-full border border-primary/70 px-3 py-2.5 text-center text-sm font-semibold text-primary pressable"
+                className="block rounded-full bg-white px-3 py-2.5 text-center text-sm font-semibold text-black pressable"
               >
-                List free in alpha
+                List free
               </Link>
             </li>
           </ul>

@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, Sparkles, Tag, X } from "lucide-react";
-// Sparkles used by CreatorSignupBand
+import { MapPin, Search, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { hasActiveFilters } from "@/lib/filters";
@@ -14,12 +13,6 @@ import {
 } from "@/lib/mock-data";
 import type { SearchFilters, ServiceMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-/** Contained hero photos — CSS background only (never layout-stretch) */
-const HERO_SHOOT =
-  "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1600&q=80";
-const HERO_EDIT =
-  "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1600&q=80";
 
 const SHOOT_CHIPS = ["Wedding", "Corporate", "Portraits", "Nightclub"] as const;
 const EDIT_CHIPS = [
@@ -43,6 +36,9 @@ type Suggestion =
   | { kind: "location"; label: string }
   | { kind: "category"; label: string };
 
+/**
+ * Discover command bar — product control, not brochure hero.
+ */
 export function HeroSearch({
   mode,
   filters,
@@ -135,237 +131,174 @@ export function HeroSearch({
     });
   }
 
-  const heroUrl = isEdit ? HERO_EDIT : HERO_SHOOT;
-
   return (
-    /* Parent directory-view already has page-shell — do not nest another */
-    <section className="relative w-full min-w-0 max-w-full">
-      {/* Contained wide hero — fixed box, CSS cover only (no next/image fill) */}
-      <div
-        className={cn(
-          "w-full min-w-0 overflow-hidden rounded-2xl border border-white/[0.08]",
-          "bg-[hsl(240_5%_7%)] shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)]"
-        )}
-      >
-        <div className="grid min-w-0 lg:grid-cols-2">
-          {/*
-            Fixed height + max-height — photo is a BACKGROUND, not a layout child.
-            This is the only reliable way to stop full-page stretch glitches.
-          */}
-          <div
-            className="media-frame relative h-[180px] w-full max-h-[36vh] min-h-[160px] sm:h-[300px] sm:max-h-[46vh] lg:h-[400px] lg:max-h-none"
-            role="img"
-            aria-label={isEdit ? "Editor workspace" : "Photography"}
-            style={{
-              backgroundColor: "hsl(240 5% 8%)",
-              backgroundImage: `url(${heroUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }}
+    <section className="relative w-full min-w-0 space-y-6 sm:space-y-8">
+      {/* Title block — typography first */}
+      <div className="max-w-2xl space-y-3">
+        <div
+          className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
+          role="tablist"
+        >
+          <Link
+            href="/"
+            className={cn(
+              "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
+              !isEdit
+                ? "bg-white text-black"
+                : "text-white/50 hover:text-white"
+            )}
           >
-            <div
-              className="pointer-events-none absolute inset-0 z-[1]"
-              style={{
-                background: [
-                  "linear-gradient(to right, transparent 55%, hsl(240 5% 7% / 0.9) 100%)",
-                  "linear-gradient(to top, hsl(240 5% 7% / 0.55) 0%, transparent 45%)",
-                ].join(", "),
+            Photographers
+          </Link>
+          <Link
+            href="/editors"
+            className={cn(
+              "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
+              isEdit
+                ? "bg-white text-black"
+                : "text-white/50 hover:text-white"
+            )}
+          >
+            Editors
+          </Link>
+        </div>
+
+        <h1 className="text-balance text-[1.85rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-[2.6rem] lg:text-[2.85rem]">
+          {isEdit ? "Find an editor" : "Find a photographer"}
+        </h1>
+        <p className="text-[15px] text-white/45">
+          Mumbai · 0% commission
+          <span className="mx-2 text-white/20">·</span>
+          <span className="text-white/35">
+            {loading
+              ? "Loading…"
+              : `${resultCount} live`}
+          </span>
+        </p>
+      </div>
+
+      {/* Command bar */}
+      <div className="surface-panel p-3 sm:p-4">
+        <div className="flex flex-col gap-3">
+          <div className="relative" ref={wrapRef}>
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-white/30" />
+            <Input
+              value={filters.query}
+              onChange={(e) => {
+                onChange({ ...filters, query: e.target.value });
+                setSuggestOpen(true);
               }}
+              onFocus={() => setSuggestOpen(true)}
+              onKeyDown={(e) => {
+                if (!suggestOpen || suggestions.length === 0) {
+                  if (e.key === "Enter") onSearch();
+                  return;
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlight((h) =>
+                    Math.min(h + 1, suggestions.length - 1)
+                  );
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlight((h) => Math.max(h - 1, 0));
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  const s = suggestions[highlight];
+                  if (s) applySuggestion(s);
+                  else onSearch();
+                } else if (e.key === "Escape") {
+                  setSuggestOpen(false);
+                }
+              }}
+              placeholder={
+                isEdit
+                  ? "Search editors, reels, colour…"
+                  : "Search area, wedding, corporate…"
+              }
+              className="h-12 border-white/[0.06] bg-black/40 pl-10 text-[15px] placeholder:text-white/30 sm:h-11"
+              autoComplete="off"
             />
+            {suggestOpen && suggestions.length > 0 && (
+              <ul className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-auto rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/60 backdrop-blur-xl">
+                {suggestions.map((s, i) => (
+                  <li key={`${s.kind}-${s.label}`}>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm",
+                        i === highlight
+                          ? "bg-white/[0.08] text-white"
+                          : "text-white/70 hover:bg-white/[0.04]"
+                      )}
+                      onMouseEnter={() => setHighlight(i)}
+                      onClick={() => applySuggestion(s)}
+                    >
+                      {s.kind === "location" ? (
+                        <MapPin className="h-3.5 w-3.5 text-white/35" />
+                      ) : (
+                        <Tag className="h-3.5 w-3.5 text-white/35" />
+                      )}
+                      {s.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
-          <div className="flex min-w-0 flex-col justify-center gap-4 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10 lg:min-h-[400px] lg:px-10">
-            <div className="space-y-2.5 sm:space-y-3">
-              <div
-                className="inline-flex max-w-full rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
-                role="tablist"
-              >
-                <Link
-                  href="/"
-                  className={cn(
-                    "rounded-full px-3 py-2 transition-colors sm:px-3.5 sm:py-1.5",
-                    !isEdit
-                      ? "bg-white text-black"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Photographers
-                </Link>
-                <Link
-                  href="/editors"
-                  className={cn(
-                    "rounded-full px-3 py-2 transition-colors sm:px-3.5 sm:py-1.5",
-                    isEdit
-                      ? "bg-white text-black"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Editors
-                </Link>
-              </div>
-
-              <h1 className="text-balance text-[1.65rem] font-semibold leading-[1.1] tracking-tight text-white sm:text-[2.5rem] lg:text-[2.75rem]">
-                {isEdit ? "Find an editor" : "Find a photographer"}
-              </h1>
-              <p className="text-sm text-white/50 sm:text-[15px]">
-                Mumbai · 0% commission
-              </p>
-              <p className="text-xs text-white/40 sm:text-sm">
-                {loading
-                  ? "Loading listings…"
-                  : `${resultCount} available · send a brief from any profile`}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Search + suggestions */}
-              <div className="relative" ref={wrapRef}>
-                <Search className="pointer-events-none absolute left-4 top-3.5 z-[1] h-4 w-4 text-white/35" />
-                <Input
-                  value={filters.query}
-                  onChange={(e) => {
-                    onChange({ ...filters, query: e.target.value });
-                    setSuggestOpen(true);
-                  }}
-                  onFocus={() => setSuggestOpen(true)}
-                  onKeyDown={(e) => {
-                    if (!suggestOpen || suggestions.length === 0) {
-                      if (e.key === "Enter") onSearch();
-                      return;
-                    }
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setHighlight((h) =>
-                        Math.min(h + 1, suggestions.length - 1)
-                      );
-                    } else if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setHighlight((h) => Math.max(h - 1, 0));
-                    } else if (e.key === "Enter") {
-                      e.preventDefault();
-                      applySuggestion(suggestions[highlight]);
-                      onSearch();
-                    } else if (e.key === "Escape") {
-                      setSuggestOpen(false);
-                    }
-                  }}
-                  placeholder="Name, style, or area (e.g. Bandra)"
-                  className="h-11 rounded-full border-white/[0.08] bg-white/[0.04] pl-11 pr-12 text-base text-white placeholder:text-white/30 focus-visible:ring-primary/40 sm:h-12 sm:text-[15px]"
-                  autoComplete="off"
-                  role="combobox"
-                  aria-expanded={suggestOpen}
-                  aria-controls="search-suggestions"
-                />
-                {active && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClear();
-                      setSuggestOpen(false);
-                    }}
-                    className="absolute right-3 top-3 z-[1] rounded-full p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-                    aria-label="Clear"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-
-                {suggestOpen && suggestions.length > 0 && (
-                  <ul
-                    id="search-suggestions"
-                    role="listbox"
-                    className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#141416] py-1.5 shadow-2xl shadow-black/60"
-                  >
-                    {suggestions.map((s, i) => (
-                      <li key={`${s.kind}-${s.label}`} role="presentation">
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={i === highlight}
-                          onMouseEnter={() => setHighlight(i)}
-                          onClick={() => {
-                            applySuggestion(s);
-                            onSearch();
-                          }}
-                          className={cn(
-                            "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors",
-                            i === highlight
-                              ? "bg-white/[0.08] text-white"
-                              : "text-white/70 hover:bg-white/[0.05]"
-                          )}
-                        >
-                          {s.kind === "location" ? (
-                            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          ) : (
-                            <Tag className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          )}
-                          <span className="min-w-0 flex-1 truncate">
-                            {s.label}
-                          </span>
-                          <span className="text-[10px] uppercase tracking-wide text-white/30">
-                            {s.kind === "location" ? "Area" : "Category"}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Selected areas */}
-              {filters.locations.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {filters.locations.map((loc) => (
-                    <button
-                      key={loc}
-                      type="button"
-                      onClick={() => removeLocation(loc)}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2.5 py-1 text-[11px] font-medium text-primary"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      {loc}
-                      <X className="h-3 w-3 opacity-70" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                {chips.map((id) => {
-                  const selected = filters.categories.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => toggleCategory(id)}
-                      className={cn(
-                        "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors",
-                        selected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-white/[0.1] bg-transparent text-white/55 hover:border-white/20 hover:text-white/90"
-                      )}
-                    >
-                      {id}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Button
+          {filters.locations.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {filters.locations.map((loc) => (
+                <button
+                  key={loc}
                   type="button"
-                  onClick={onSearch}
-                  size="lg"
-                  className="h-11 rounded-full px-8 font-semibold"
+                  onClick={() => removeLocation(loc)}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/80"
                 >
-                  {loading
-                    ? "Loading…"
-                    : resultCount > 0
-                      ? `See ${resultCount} result${resultCount === 1 ? "" : "s"}`
-                      : "See results"}
-                </Button>
-              </div>
+                  {loc}
+                  <X className="h-3 w-3 opacity-60" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {chips.map((id) => {
+              const selected = filters.categories.includes(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleCategory(id)}
+                  className={cn("chip", selected && "chip-active")}
+                >
+                  {id}
+                </button>
+              );
+            })}
+            {active && (
+              <button
+                type="button"
+                onClick={onClear}
+                className="text-xs font-medium text-white/40 hover:text-white/70"
+              >
+                Clear
+              </button>
+            )}
+            <div className="ml-auto">
+              <Button
+                type="button"
+                onClick={onSearch}
+                size="sm"
+                className="h-9 rounded-full px-5 font-semibold"
+              >
+                {loading
+                  ? "…"
+                  : resultCount > 0
+                    ? `See ${resultCount}`
+                    : "See results"}
+              </Button>
             </div>
           </div>
         </div>
@@ -374,54 +307,21 @@ export function HeroSearch({
   );
 }
 
-/** Creator band — use inside `.page-shell` so width matches the grid */
+/** Quiet creator CTA — no gradient shout */
 export function CreatorSignupBand() {
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-primary/25",
-        "bg-gradient-to-br from-primary/[0.12] via-[hsl(240_5%_8%)] to-[hsl(240_6%_5%)]",
-        "px-5 py-5 sm:px-7 sm:py-6"
-      )}
-    >
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/15 blur-3xl"
-        aria-hidden
-      />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <div className="space-y-1">
-            <p className="text-base font-semibold tracking-tight text-white sm:text-lg">
-              Photographers &amp; editors — list on ROLLR
-            </p>
-            <p className="max-w-xl text-sm text-white/50">
-              Unlimited briefs. Zero commission.{" "}
-              <span className="text-primary">
-                List free in alpha · ₹299/mo when billing starts
-              </span>
-              .
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button asChild size="lg" className="h-11 font-semibold">
-            <Link href="/signup?role=creator&next=/studio">
-              Sign up as creator
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="h-11 font-semibold"
-          >
-            <Link href="/list">See pricing</Link>
-          </Button>
-        </div>
+    <div className="flex flex-col items-start justify-between gap-4 rounded-[var(--radius-lg)] border border-white/[0.06] bg-white/[0.02] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-sm font-medium text-white/90">
+          Photographers &amp; editors
+        </p>
+        <p className="text-sm text-white/40">
+          List free in alpha · ₹299/mo when billing starts · 0% commission
+        </p>
       </div>
+      <Button asChild variant="outline" size="sm" className="shrink-0 font-semibold">
+        <Link href="/signup?role=creator&next=/studio">List free</Link>
+      </Button>
     </div>
   );
 }

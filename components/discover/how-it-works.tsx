@@ -1,81 +1,82 @@
 import Link from "next/link";
-import { CheckCircle2, FileText, MessageCircle, Sparkles } from "lucide-react";
 
 const clientSteps = [
   {
-    icon: FileText,
-    title: "Browse profiles",
-    body: "Filter by area and category — see portfolio & floors.",
+    title: "Browse",
+    body: "Filter by area and category — portfolio & package floors.",
   },
   {
-    icon: CheckCircle2,
     title: "Send a brief",
     body: "Your WhatsApp + what you need. No public phone hunt.",
   },
   {
-    icon: MessageCircle,
     title: "They message you",
-    body: "If it’s a fit, they WhatsApp you. Book direct — 0% fee.",
+    body: "If it’s a fit, they WhatsApp you. Book direct — 0%.",
   },
 ];
 
 const creatorSteps = [
   {
-    icon: Sparkles,
-    title: "Build portfolio + list free",
-    body: "Works on ROLLR + optional links.",
+    title: "List free",
+    body: "Build portfolio on ROLLR. Alpha listing is free.",
   },
   {
-    icon: FileText,
-    title: "Get client briefs",
+    title: "Get briefs",
     body: "Review each request before you reply.",
   },
   {
-    icon: MessageCircle,
-    title: "You WhatsApp the client",
-    body: "Keep 100% of the job. Your number stays off the profile.",
+    title: "You message the client",
+    body: "Keep 100% of the job. Your number stays private.",
   },
 ];
 
 export function HowItWorks() {
   return (
     <section className="grid gap-4 md:grid-cols-2">
-      <div className="rounded-xl border border-border bg-card/50 p-4 sm:p-5">
-        <h2 className="text-sm font-semibold tracking-tight">For clients</h2>
-        <ol className="mt-3 space-y-3">
+      <div className="surface-panel p-5 sm:p-6">
+        <h2 className="text-[13px] font-medium uppercase tracking-[0.12em] text-white/35">
+          For clients
+        </h2>
+        <ol className="mt-5 space-y-4">
           {clientSteps.map((step, i) => (
-            <li key={step.title} className="flex gap-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary text-[11px] font-semibold text-muted-foreground">
+            <li key={step.title} className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[11px] font-semibold tabular-nums text-white/50">
                 {i + 1}
               </span>
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{step.title}</p>
-                <p className="text-xs text-muted-foreground">{step.body}</p>
+              <div className="min-w-0 pt-0.5">
+                <p className="text-sm font-medium text-white/90">{step.title}</p>
+                <p className="mt-0.5 text-sm leading-relaxed text-white/40">
+                  {step.body}
+                </p>
               </div>
             </li>
           ))}
         </ol>
       </div>
 
-      <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 sm:p-5">
+      <div className="surface-panel p-5 sm:p-6">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold tracking-tight">For creators</h2>
+          <h2 className="text-[13px] font-medium uppercase tracking-[0.12em] text-white/35">
+            For creators
+          </h2>
           <Link
             href="/signup?role=creator&next=/studio"
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-xs font-medium text-white/50 transition-colors hover:text-white"
           >
-            Start listing →
+            Start →
           </Link>
         </div>
-        <ol className="mt-3 space-y-3">
+        <ol className="mt-5 space-y-4">
           {creatorSteps.map((step, i) => (
-            <li key={step.title} className="flex gap-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-[11px] font-semibold text-primary">
+            <li key={step.title} className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[11px] font-semibold tabular-nums text-white/50">
                 {i + 1}
               </span>
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{step.title}</p>
-                <p className="text-xs text-muted-foreground">{step.body}</p>
+              <div className="min-w-0 pt-0.5">
+                <p className="text-sm font-medium text-white/90">{step.title}</p>
+                <p className="mt-0.5 text-sm leading-relaxed text-white/40">
+                  {step.body}
+                </p>
               </div>
             </li>
           ))}
