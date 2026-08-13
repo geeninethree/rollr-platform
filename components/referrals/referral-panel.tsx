@@ -12,6 +12,10 @@ import {
   type ReferralReward,
 } from "@/lib/referrals";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  connectionErrorMessage,
+  humanizeSaveError,
+} from "@/lib/user-messages";
 
 /** Flip to true when referral cashback goes live */
 const REFERRALS_ACTIVE = false;
@@ -29,7 +33,7 @@ export function ReferralPanel({ userId }: { userId: string }) {
   const load = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Supabase not configured");
+      setError(connectionErrorMessage());
       setLoading(false);
       return;
     }
@@ -41,11 +45,7 @@ export function ReferralPanel({ userId }: { userId: string }) {
     setEarnedTotal(stats.earnedTotalInr);
     setRewards(stats.rewards);
     if (stats.error) {
-      setError(
-        stats.error.includes("referral") || stats.error.includes("schema")
-          ? `${stats.error} — run migration 00005_referrals.sql`
-          : stats.error
-      );
+      setError(humanizeSaveError(stats.error));
     } else {
       setError(null);
     }
@@ -72,24 +72,16 @@ export function ReferralPanel({ userId }: { userId: string }) {
   return (
     <Card className="border-border bg-card/80 opacity-95">
       <CardHeader className="pb-2">
-        <CardTitle className="flex flex-col gap-2 text-base sm:flex-row sm:items-center">
-          <span className="flex items-center gap-2">
-            <Gift className="h-4 w-4 shrink-0 text-muted-foreground" />
-            Refer creators
-          </span>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-            (NOT CURRENTLY ACTIVE — ALPHA TESTING PHASE)
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          <Gift className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Refer creators
+          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+            Coming soon
           </span>
         </CardTitle>
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-          Not currently active — alpha testing phase
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Planned: share your invite link; when someone signs up and{" "}
-          <strong className="text-foreground">publishes</strong> a listing, you
-          earn ₹{REFERRAL_CASHBACK_INR} cashback. Tracking may work in Portfolio;
-          cashback is <strong className="text-foreground">not paid out</strong>{" "}
-          during alpha.
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Invite link is ready to share. Cashback (₹{REFERRAL_CASHBACK_INR} when
+          a referred creator publishes) is not paid out during alpha.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

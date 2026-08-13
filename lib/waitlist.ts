@@ -93,12 +93,19 @@ export async function submitWaitlist(
       msg.toLowerCase().includes("schema") ||
       msg.toLowerCase().includes("check")
     ) {
+      console.warn("[rollr] waitlist schema error:", msg);
       return {
         ok: false,
-        error: `${msg} — run migrations 00007, 00010, and 00014 if missing`,
+        error: "Couldn’t save your interest right now. Please try again later.",
       };
     }
-    return { ok: false, error: msg };
+    return {
+      ok: false,
+      error:
+        msg.length > 120
+          ? "Couldn’t save your interest. Please try again."
+          : msg,
+    };
   }
 
   // Notify admin(s) if Resend + ADMIN_EMAILS configured

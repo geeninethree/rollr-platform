@@ -30,13 +30,17 @@ export async function setProfileRole(
 
   if (error) {
     const msg = error.message || "Could not update role";
+    console.warn("[rollr] setProfileRole:", msg);
     if (msg.includes("invalid input value for enum") || msg.includes("recruiter")) {
       return {
         ok: false,
-        error: `${msg} — run supabase/migrations/00009_jobs_and_recruiter.sql`,
+        error: "Couldn’t update your account type. Please try again later.",
       };
     }
-    return { ok: false, error: msg };
+    return {
+      ok: false,
+      error: msg.length > 120 ? "Couldn’t update your account. Try again." : msg,
+    };
   }
   return { ok: true };
 }
@@ -96,12 +100,15 @@ export async function claimRecruiterPath(
       })
       .eq("id", userId);
     if (error) {
+      console.warn("[rollr] claimRecruiterPath:", error.message);
       return {
         ok: false,
         error:
           error.message.includes("enum") || error.message.includes("recruiter")
-            ? `${error.message} — run migration 00009_jobs_and_recruiter.sql`
-            : error.message,
+            ? "Couldn’t set recruiter access. Please try again later."
+            : error.message.length > 120
+              ? "Couldn’t join the waitlist. Try again."
+              : error.message,
       };
     }
   }

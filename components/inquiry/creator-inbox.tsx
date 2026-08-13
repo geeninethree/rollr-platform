@@ -205,9 +205,11 @@ export function CreatorInbox() {
 
       {error && (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-          {error}
-          {(error.includes("relation") || error.includes("schema")) &&
-            " — run migration 00007_waitlist_and_inquiries.sql"}
+          {error.includes("relation") ||
+          error.includes("schema") ||
+          error.includes("migration")
+            ? "Couldn’t sync your inbox right now. Try refreshing or signing in again."
+            : error}
         </p>
       )}
 

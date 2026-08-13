@@ -186,12 +186,10 @@ export function SendBriefDialog({
       setError(result.error || "Could not send brief.");
       return;
     }
-    // Local-only fallback: still allow success but warn clearly
+    // Local-only fallback: success UI with a soft note (not a red tech error)
     if (result.source === "local") {
       setError(
-        result.error
-          ? `Brief saved only on this browser (${result.error}). Creator will not see it on other devices until Supabase inquiries work.`
-          : "Brief saved only on this browser — creator will not see it elsewhere."
+        "Note: saved on this device only for now. The creator may not see it on other devices."
       );
     }
     setSubmittedId(result.inquiry.id);

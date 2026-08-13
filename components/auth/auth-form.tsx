@@ -13,8 +13,14 @@ import {
   REFERRAL_CASHBACK_INR,
   saveReferralCodeLocal,
 } from "@/lib/referrals";
+import { getAuthCallbackUrl } from "@/lib/auth-redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/lib/types";
+import {
+  connectionErrorMessage,
+  humanizeAuthError,
+  safeNextPath,
+} from "@/lib/user-messages";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "signup";
@@ -44,6 +50,7 @@ export function AuthForm({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsConfirm, setNeedsConfirm] = useState(false);
   const [refCode, setRefCode] = useState(
     () => referralCode?.trim().toLowerCase() || ""
   );
@@ -59,16 +66,58 @@ export function AuthForm({
     if (stored) setRefCode(stored);
   }, [referralCode]);
 
+  async function resendConfirmation() {
+    setError(null);
+    setMessage(null);
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setError(connectionErrorMessage());
+      return;
+    }
+    const destEmail = email.trim();
+    if (!destEmail) {
+      setError("Enter your email first.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const dest = safeNextPath(next, "/");
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: destEmail,
+        options: {
+          emailRedirectTo: getAuthCallbackUrl(dest),
+        },
+      });
+      if (resendError) {
+        // Fallback: magic link often works when resend type is restricted
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          email: destEmail,
+          options: { emailRedirectTo: getAuthCallbackUrl(dest) },
+        });
+        if (otpError) {
+          setError(humanizeAuthError(resendError.message || otpError.message));
+          return;
+        }
+      }
+      setNeedsConfirm(true);
+      setMessage(
+        "New link sent — check your inbox and spam folder. Use the latest email only."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setMessage(null);
+    setNeedsConfirm(false);
 
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError(
-        "Supabase is not configured. Add keys to .env.local and restart the dev server."
-      );
+      setError(connectionErrorMessage());
       return;
     }
 
@@ -76,6 +125,11 @@ export function AuthForm({
       setError("Password must be at least 6 characters.");
       return;
     }
+
+    const dest = safeNextPath(
+      next,
+      role === "recruiter" ? "/job-board" : role === "creator" ? "/studio" : "/"
+    );
 
     setLoading(true);
     try {
@@ -88,57 +142,69 @@ export function AuthForm({
               full_name: fullName.trim() || email.split("@")[0],
               role,
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+            emailRedirectTo: getAuthCallbackUrl(dest),
           },
         });
 
         if (signUpError) {
-          setError(signUpError.message);
+          const msg = signUpError.message || "";
+          if (
+            msg.toLowerCase().includes("already") ||
+            msg.toLowerCase().includes("registered")
+          ) {
+            setError(
+              "An account with this email already exists. Sign in, or resend confirmation if you haven’t verified yet."
+            );
+            setNeedsConfirm(true);
+            return;
+          }
+          setError(humanizeAuthError(msg));
+          return;
+        }
+
+        // Supabase returns a user with empty identities when email is already registered
+        // (security: no error). Treat as existing account.
+        const identities = data.user?.identities;
+        if (data.user && Array.isArray(identities) && identities.length === 0) {
+          setError(
+            "An account with this email already exists. Sign in, or resend confirmation if you haven’t verified yet."
+          );
+          setNeedsConfirm(true);
           return;
         }
 
         const newId = data.user?.id;
         const code = refCode || getReferralCodeLocal();
-        if (newId && code) {
+        if (newId && code && data.session) {
           await attachReferralOnSignup(supabase, newId, code);
           clearReferralCodeLocal();
+        } else if (code) {
+          // Keep code for after confirm
+          saveReferralCodeLocal(code);
         }
 
-        // Persist role on profiles (enum must include recruiter — migration 00009)
-        let roleNote = "";
+        // Soft side-effects — never block signup
         if (newId) {
           if (role === "recruiter") {
-            if (data.session) {
-              const { claimRecruiterPath } = await import("@/lib/roles");
-              const claimed = await claimRecruiterPath(supabase, newId, {
-                full_name: fullName.trim() || email.split("@")[0],
-                notes:
-                  "Auto-added on recruiter signup — multi-job pending activation",
-              });
-              if (!claimed.ok) {
-                // Account exists; don't block — surface soft warning
-                roleNote = ` Role/waitlist issue: ${claimed.error || "unknown"}. Use Job board → Join recruiter waitlist.`;
+            try {
+              if (data.session) {
+                const { claimRecruiterPath } = await import("@/lib/roles");
+                await claimRecruiterPath(supabase, newId, {
+                  full_name: fullName.trim() || email.split("@")[0],
+                  notes: "Recruiter signup",
+                });
               } else {
-                roleNote = claimed.waitlisted
-                  ? " You’re on the multi-job waitlist (Recruiter ₹399)."
-                  : claimed.error
-                    ? ` ${claimed.error}`
-                    : " Multi-job pending activation.";
+                const { submitWaitlist } = await import("@/lib/waitlist");
+                await submitWaitlist(supabase, {
+                  full_name: fullName.trim() || email.split("@")[0],
+                  email: email.trim(),
+                  role: "recruiter",
+                  primary_category: "Multi-job board",
+                  notes: "Recruiter signup (email confirm pending)",
+                });
               }
-            } else {
-              // No session yet (email confirm on) — waitlist is public insert
-              const { submitWaitlist } = await import("@/lib/waitlist");
-              const wl = await submitWaitlist(supabase, {
-                full_name: fullName.trim() || email.split("@")[0],
-                email: email.trim(),
-                role: "recruiter",
-                primary_category: "Multi-job board",
-                notes:
-                  "Recruiter signup (confirm email pending) — multi-job waitlist",
-              });
-              roleNote = wl.ok
-                ? " You’re on the multi-job waitlist (Recruiter ₹399)."
-                : ` Waitlist note: ${wl.error || "could not save"} — try Job board after confirm.`;
+            } catch (err) {
+              console.warn("[rollr] recruiter waitlist soft-fail", err);
             }
           } else if (data.session) {
             const { error: roleError } = await supabase
@@ -150,57 +216,78 @@ export function AuthForm({
               })
               .eq("id", newId);
             if (roleError) {
-              roleNote = ` Role save issue: ${roleError.message}.`;
+              console.warn("[rollr] role save soft-fail", roleError.message);
             }
           }
         }
 
-        // If email confirmation is off, session exists immediately
+        // Email confirm off → session immediately
         if (data.session) {
           if (role === "recruiter") {
             setMessage(
-              "Account created. You can post 1 open job now." +
-                (roleNote ||
-                  " Multi-job (Recruiter ₹399) is on the waitlist until we activate it.")
+              "Account created. You can post 1 open job now. Multi-job access is on the waitlist."
             );
             setTimeout(() => {
-              router.push(next || "/job-board");
+              router.push(dest || "/job-board");
               router.refresh();
-            }, 1800);
+            }, 1600);
             return;
           }
-          router.push(next);
+          router.push(dest);
           router.refresh();
           return;
         }
 
+        // Confirm email required
+        setNeedsConfirm(true);
         setMessage(
-          "Check your email to confirm your account — or disable “Confirm email” in Supabase Auth settings for local testing." +
-            (role === "recruiter"
-              ? roleNote ||
-                " You’re also on the recruiter waitlist for multi-job access."
-              : "") +
-            (code
-              ? ` Referral ${code} will apply when you confirm.`
-              : "")
+          role === "recruiter"
+            ? "Check your email to confirm your account (and spam). You’re also on the multi-job waitlist."
+            : "Check your email to confirm your account (and spam folder), then open the latest link we sent."
         );
         return;
       }
 
+      // ── Login ─────────────────────────────────────────────
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (signInError) {
-        setError(signInError.message);
+        const msg = signInError.message || "";
+        if (
+          msg.toLowerCase().includes("email not confirmed") ||
+          msg.toLowerCase().includes("not confirmed")
+        ) {
+          setNeedsConfirm(true);
+          setError(
+            "Please confirm your email first. Check inbox/spam, or resend the link below."
+          );
+          return;
+        }
+        setError(humanizeAuthError(msg));
         return;
       }
 
-      router.push(next);
+      // Apply pending referral after login
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const pendingRef = getReferralCodeLocal();
+      if (user && pendingRef) {
+        await attachReferralOnSignup(supabase, user.id, pendingRef);
+        clearReferralCodeLocal();
+      }
+
+      router.push(dest);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        humanizeAuthError(
+          err instanceof Error ? err.message : "Something went wrong"
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -211,7 +298,7 @@ export function AuthForm({
     setMessage(null);
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Supabase is not configured.");
+      setError(connectionErrorMessage());
       return;
     }
     if (!email.trim()) {
@@ -219,12 +306,14 @@ export function AuthForm({
       return;
     }
 
+    const dest = safeNextPath(next, "/");
     setLoading(true);
     try {
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          emailRedirectTo: getAuthCallbackUrl(dest),
+          shouldCreateUser: mode === "signup",
           data:
             mode === "signup"
               ? { full_name: fullName.trim() || email.split("@")[0], role }
@@ -232,10 +321,11 @@ export function AuthForm({
         },
       });
       if (otpError) {
-        setError(otpError.message);
+        setError(humanizeAuthError(otpError.message));
         return;
       }
-      setMessage("Magic link sent — check your inbox (and spam).");
+      setNeedsConfirm(true);
+      setMessage("Link sent — check your inbox and spam folder.");
     } finally {
       setLoading(false);
     }
@@ -248,18 +338,16 @@ export function AuthForm({
           Invite code{" "}
           <span className="font-mono font-semibold text-primary">{refCode}</span>
           {" · "}
-          Referral cashback is{" "}
-          <strong className="uppercase tracking-wide text-amber-200">
-            not currently active — alpha testing phase
-          </strong>
-          . Code is saved for when payouts go live (₹{REFERRAL_CASHBACK_INR} on
-          publish).
+          Saved for when referral cashback goes live (₹{REFERRAL_CASHBACK_INR}).
         </p>
       )}
       {mode === "signup" && (
         <>
           <div className="space-y-1.5">
-            <label htmlFor="full-name" className="text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor="full-name"
+              className="text-xs font-medium text-muted-foreground"
+            >
               Full name
             </label>
             <Input
@@ -305,7 +393,10 @@ export function AuthForm({
       )}
 
       <div className="space-y-1.5">
-        <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor="email"
+          className="text-xs font-medium text-muted-foreground"
+        >
           Email
         </label>
         <Input
@@ -321,7 +412,10 @@ export function AuthForm({
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor="password"
+          className="text-xs font-medium text-muted-foreground"
+        >
           Password
         </label>
         <Input
@@ -338,7 +432,10 @@ export function AuthForm({
       </div>
 
       {error && (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -346,6 +443,25 @@ export function AuthForm({
         <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
           {message}
         </p>
+      )}
+
+      {needsConfirm && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          disabled={loading || !email.trim()}
+          onClick={() => void resendConfirmation()}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sending…
+            </>
+          ) : (
+            "Resend confirmation email"
+          )}
+        </Button>
       )}
 
       <Button type="submit" className="w-full font-semibold" disabled={loading}>

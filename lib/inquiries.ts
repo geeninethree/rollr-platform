@@ -166,11 +166,13 @@ export async function createInquiryRemote(
       msg.toLowerCase().includes("relation") ||
       msg.toLowerCase().includes("does not exist")
     ) {
-      // Local fallback for demo / missing migration — still warn
+      // Local fallback for demo / missing backend — keep user-facing copy simple
+      console.warn("[rollr] inquiry insert fallback:", msg);
       const local = createInquiry(input);
       return {
         inquiry: local,
-        error: `${msg} — brief saved locally only. Run migrations 00007 + 00014 if on live listings.`,
+        error:
+          "Saved on this device only — the creator won’t see it elsewhere yet.",
         source: "local",
       };
     }

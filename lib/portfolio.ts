@@ -150,7 +150,7 @@ export function qualityChecks(
     {
       id: "featured",
       label: "At least 3 featured pieces (for cards)",
-      ok: featured.length >= 3 || creator.works.length >= 3,
+      ok: featured.length >= 3,
       required: true,
     },
     {

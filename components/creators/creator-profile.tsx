@@ -85,9 +85,9 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
           </Link>
         </Button>
 
-        {/* Cinematic hero — fixed height so cover never stretches the page */}
-        <div className="relative mb-6 overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-black/40">
-          <div className="media-frame relative h-[220px] w-full max-h-[40vh] bg-secondary sm:h-[280px] sm:max-h-[42vh] lg:h-[320px] lg:max-h-none">
+        {/* Cover — image only on mobile so nothing clips; identity sits below */}
+        <div className="relative mb-4 overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-black/40 sm:mb-6">
+          <div className="media-frame relative h-[180px] w-full bg-secondary sm:h-[260px] lg:h-[300px]">
             <CoverImage
               src={creator.cover_url}
               alt=""
@@ -98,13 +98,12 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
               className="pointer-events-none absolute inset-0 z-[1]"
               style={{
                 background: [
-                  "linear-gradient(to top, hsl(0 0% 0%) 0%, hsl(0 0% 0% / 0.75) 28%, transparent 62%)",
-                  "linear-gradient(to bottom, hsl(0 0% 0% / 0.45) 0%, transparent 35%)",
-                  "linear-gradient(to right, hsl(0 0% 0% / 0.25) 0%, transparent 40%)",
+                  "linear-gradient(to top, hsl(0 0% 0% / 0.55) 0%, transparent 55%)",
+                  "linear-gradient(to bottom, hsl(0 0% 0% / 0.35) 0%, transparent 40%)",
                 ].join(", "),
               }}
             />
-            <div className="absolute right-4 top-4 z-[2] flex flex-col items-end gap-1.5">
+            <div className="absolute right-3 top-3 z-[2] flex flex-col items-end gap-1.5 sm:right-4 sm:top-4">
               {hybrid && (
                 <Badge className="border border-white/20 bg-black/50 text-white backdrop-blur-sm">
                   Shoots + edits
@@ -113,11 +112,11 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
               <ListingStatusBadge status={creator.listing_status} />
             </div>
 
-            {/* Identity on cover (mock 26) — stays inside the frame */}
-            <div className="absolute inset-x-0 bottom-0 z-[2] p-4 sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="flex min-w-0 items-end gap-3 sm:gap-4">
-                  <div className="media-frame relative h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-white/20 shadow-lg sm:h-20 sm:w-20">
+            {/* Desktop overlay identity only — avoids mobile overflow */}
+            <div className="absolute inset-x-0 bottom-0 z-[2] hidden p-6 sm:block">
+              <div className="flex items-end justify-between gap-4">
+                <div className="flex min-w-0 items-end gap-4">
+                  <div className="media-frame relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/20 shadow-lg">
                     {creator.avatar_url ? (
                       <Image
                         src={creator.avatar_url}
@@ -125,7 +124,6 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                         fill
                         sizes="80px"
                         className="object-cover"
-                        style={{ objectFit: "cover" }}
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center bg-secondary text-lg font-semibold">
@@ -134,7 +132,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                     )}
                   </div>
                   <div className="min-w-0 space-y-1">
-                    <h1 className="truncate text-xl font-semibold tracking-tight text-white drop-shadow sm:text-2xl lg:text-3xl">
+                    <h1 className="truncate text-2xl font-semibold tracking-tight text-white drop-shadow lg:text-3xl">
                       {creator.full_name}
                     </h1>
                     <p className="line-clamp-1 text-sm text-white/80">
@@ -146,7 +144,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                         </span>
                       )}
                     </p>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-white/70 sm:text-sm">
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
                       <span className="inline-flex items-center gap-1">
                         <Star className="h-3.5 w-3.5 fill-primary text-primary" />
                         {creator.review_count > 0 ? (
@@ -176,10 +174,10 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-                  <div className="text-left sm:text-right">
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <div className="text-right">
                     <p className="text-[11px] text-white/50">Packages from</p>
-                    <p className="text-xl font-semibold text-gold sm:text-2xl">
+                    <p className="text-2xl font-semibold text-gold">
                       {priceLabelFrom(price)}
                     </p>
                   </div>
@@ -197,16 +195,70 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
           </div>
         </div>
 
+        {/* Mobile identity card — always fully visible, no clipping */}
+        <div className="mb-6 rounded-2xl border border-border bg-card p-4 sm:hidden">
+          <div className="flex gap-3">
+            <div className="media-frame relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-border bg-secondary">
+              {creator.avatar_url ? (
+                <Image
+                  src={creator.avatar_url}
+                  alt={creator.full_name}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-lg font-semibold">
+                  {creator.full_name.slice(0, 1)}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <h1 className="text-xl font-semibold tracking-tight leading-tight break-words">
+                {creator.full_name}
+              </h1>
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {tagline}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                  {creator.review_count > 0
+                    ? `${creator.rating.toFixed(1)} (${creator.review_count})`
+                    : "New on ROLLR"}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-primary/90" />
+                  {creator.sub_regions[0] || "Mumbai"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex items-end justify-between gap-3 border-t border-border pt-3">
+            <div>
+              <p className="text-[11px] text-muted-foreground">Packages from</p>
+              <p className="text-xl font-semibold text-gold">
+                {priceLabelFrom(price)}
+              </p>
+            </div>
+            <p className="max-w-[9rem] text-right text-[11px] leading-snug text-muted-foreground">
+              {tab === "edit" && creator.turnaround_label
+                ? creator.turnaround_label
+                : creator.response_label}
+            </p>
+          </div>
+        </div>
+
         {/* Body */}
-        <div className="grid gap-10 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-8">
+        <div className="grid min-w-0 gap-10 lg:grid-cols-[1fr_300px]">
+          <div className="min-w-0 space-y-8">
             {canShoot && canEdit && (
-              <div className="inline-flex rounded-full border border-border bg-card p-1">
+              <div className="inline-flex max-w-full rounded-full border border-border bg-card p-1">
                 <button
                   type="button"
                   onClick={() => setTab("shoot")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors sm:px-4",
                     tab === "shoot"
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -219,7 +271,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                   type="button"
                   onClick={() => setTab("edit")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors sm:px-4",
                     tab === "edit"
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -250,30 +302,20 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
             </div>
 
             <section className="space-y-2">
-              <h2 className="text-lg font-semibold tracking-tight">
-                About
-              </h2>
-              <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
+              <h2 className="text-lg font-semibold tracking-tight">About</h2>
+              <p className="max-w-2xl break-words text-base leading-relaxed text-muted-foreground">
                 {bio}
               </p>
               <p className="text-xs text-muted-foreground">
                 {workCount(creator)} works on ROLLR
-                {creator.quality_score
-                  ? ` · quality ${creator.quality_score}/100`
-                  : ""}
               </p>
             </section>
 
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold tracking-tight">
-                Portfolio
-              </h2>
-              <PortfolioGallery
-                works={creator.works}
-                mode={tab}
-                creatorName={creator.full_name}
-              />
-            </section>
+            <PortfolioGallery
+              works={creator.works}
+              mode={tab}
+              creatorName={creator.full_name}
+            />
 
             <ExternalLinksSection links={creator.links} />
 
@@ -284,7 +326,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
             />
           </div>
 
-          <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+          <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24">
             <div className="rounded-2xl border border-border bg-card p-5 shadow-lg shadow-black/25">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Packages from
@@ -306,8 +348,10 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                         key={cat}
                         className="flex items-center justify-between gap-2 text-xs"
                       >
-                        <span className="text-muted-foreground">{cat}</span>
-                        <span className="font-medium tabular-nums text-gold">
+                        <span className="min-w-0 truncate text-muted-foreground">
+                          {cat}
+                        </span>
+                        <span className="shrink-0 font-medium tabular-nums text-gold">
                           {formatPriceInr(p)}
                         </span>
                       </li>
@@ -343,7 +387,7 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
 
             <div className="rounded-2xl border border-border/80 bg-card/60 p-4 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Services</p>
-              <p className="mt-1">
+              <p className="mt-1 break-words">
                 {creator.service_modes
                   .map((m) =>
                     m === "shoot" ? "Event coverage" : "Editing / post"
@@ -351,13 +395,15 @@ export function CreatorProfile({ creator, initialTab }: CreatorProfileProps) {
                   .join(" · ")}
               </p>
               <p className="mt-3 font-medium text-foreground">Areas</p>
-              <p className="mt-1">{creator.sub_regions.join(", ")}</p>
+              <p className="mt-1 break-words">
+                {creator.sub_regions.join(", ")}
+              </p>
             </div>
           </aside>
         </div>
       </div>
 
-      {/* Mobile sticky hire CTA — desktop uses sidebar button */}
+      {/* Mobile sticky hire CTA */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <SendBriefButton
           creator={creator}

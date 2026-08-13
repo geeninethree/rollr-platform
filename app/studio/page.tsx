@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Cloud, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Cloud,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +22,7 @@ import { QualityChecklist } from "@/components/portfolio/quality-checklist";
 import { ReferralPanel } from "@/components/referrals/referral-panel";
 import { ProfileShareCard } from "@/components/share/profile-share-card";
 import { ImageUploadField } from "@/components/studio/image-upload-field";
+import { StudioStepper } from "@/components/studio/studio-stepper";
 import {
   loadCreatorListing,
   saveCreatorListing,
@@ -25,14 +34,28 @@ import {
   minCategoryPrice,
   syncCategoryPrices,
 } from "@/lib/pricing";
-import { uploadCreatorImage } from "@/lib/storage";
+import { uploadCreatorImage, uploadSizeHint } from "@/lib/storage";
+import {
+  STUDIO_STEPS,
+  firstIncompleteStep,
+  isStepComplete,
+  stepIndex,
+  validateStudioStep,
+  type StudioStepId,
+} from "@/lib/studio-steps";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   draftToCreator,
   emptyStudioDraft,
+  PREVIEW_AVATAR,
+  PREVIEW_COVER,
   type StudioDraft,
 } from "@/lib/studio";
 import type { PortfolioItem, ServiceMode } from "@/lib/types";
+import {
+  connectionErrorMessage,
+  humanizeSaveError,
+} from "@/lib/user-messages";
 import { cn } from "@/lib/utils";
 
 const PRESET_WORKS = [
@@ -44,6 +67,8 @@ const PRESET_WORKS = [
   "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80",
 ];
 
+const STORAGE_STEP_KEY = "rollr_studio_step";
+
 export default function StudioPage() {
   const router = useRouter();
   const [draft, setDraft] = useState<StudioDraft>(emptyStudioDraft);
@@ -52,6 +77,8 @@ export default function StudioPage() {
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [step, setStep] = useState<StudioStepId>("about");
   const [userId, setUserId] = useState<string | null>(null);
   const [listingId, setListingId] = useState<string | null>(null);
   const [workUrl, setWorkUrl] = useState(PRESET_WORKS[0]);
@@ -59,13 +86,14 @@ export default function StudioPage() {
   const [uploadingWorks, setUploadingWorks] = useState(false);
   const [uploadWorkError, setUploadWorkError] = useState<string | null>(null);
   const workFileRef = useRef<HTMLInputElement>(null);
+  const stepTopRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Supabase is not configured.");
+      setError(connectionErrorMessage());
       setLoading(false);
       setMounted(true);
       return;
@@ -76,23 +104,30 @@ export default function StudioPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      router.replace(
-        `/login?next=${encodeURIComponent("/studio")}`
-      );
+      router.replace(`/login?next=${encodeURIComponent("/studio")}`);
       return;
     }
 
     setUserId(user.id);
     const result = await loadCreatorListing(supabase, user.id);
     if (result.error) {
-      setError(
-        result.error.includes("column") || result.error.includes("schema")
-          ? `${result.error} — run migrations 00003–00005 in the Supabase SQL Editor.`
-          : result.error
-      );
+      setError(humanizeSaveError(result.error));
     }
     setDraft(result.draft);
     setListingId(result.listingId);
+
+    // Resume last step, or jump to first incomplete
+    try {
+      const saved = sessionStorage.getItem(STORAGE_STEP_KEY) as StudioStepId | null;
+      if (saved && STUDIO_STEPS.some((s) => s.id === saved)) {
+        setStep(saved);
+      } else {
+        setStep(firstIncompleteStep(result.draft));
+      }
+    } catch {
+      setStep(firstIncompleteStep(result.draft));
+    }
+
     setLoading(false);
     setMounted(true);
   }, [router]);
@@ -101,11 +136,67 @@ export default function StudioPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_STEP_KEY, step);
+    } catch {
+      /* ignore */
+    }
+  }, [step]);
+
   const creator = useMemo(() => draftToCreator(draft), [draft]);
+  const currentMeta = STUDIO_STEPS.find((s) => s.id === step)!;
+  const currentIdx = stepIndex(step);
+  const isLast = currentIdx === STUDIO_STEPS.length - 1;
+  const isFirst = currentIdx === 0;
+
+  const completedCount = useMemo(
+    () =>
+      STUDIO_STEPS.filter(
+        (s) => s.id !== "review" && isStepComplete(s.id, draft)
+      ).length,
+    [draft]
+  );
+  const requiredSteps = STUDIO_STEPS.length - 1; // review is optional completeness
 
   function updateLocal(partial: Partial<StudioDraft>) {
     setDraft((d) => ({ ...d, ...partial, updated_at: new Date().toISOString() }));
     setStatusMsg(null);
+    setStepErrors([]);
+  }
+
+  function goToStep(id: StudioStepId) {
+    setStepErrors([]);
+    setStep(id);
+    setStatusMsg(null);
+    requestAnimationFrame(() => {
+      stepTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function tryNext() {
+    const errs = validateStudioStep(step, draft);
+    if (errs.length > 0) {
+      setStepErrors(errs);
+      return;
+    }
+    setStepErrors([]);
+    if (!isLast) {
+      goToStep(STUDIO_STEPS[currentIdx + 1].id);
+    }
+  }
+
+  function goBack() {
+    if (!isFirst) {
+      goToStep(STUDIO_STEPS[currentIdx - 1].id);
+    }
+  }
+
+  function jumpToFirstIssue() {
+    const id = firstIncompleteStep(draft);
+    goToStep(id);
+    const errs = validateStudioStep(id, draft);
+    setStepErrors(errs);
   }
 
   function toggleMode(mode: ServiceMode) {
@@ -117,6 +208,7 @@ export default function StudioPage() {
       if (service_modes.length === 0) service_modes = ["shoot"];
       return { ...d, service_modes, updated_at: new Date().toISOString() };
     });
+    setStepErrors([]);
   }
 
   function toggleRegion(loc: string) {
@@ -130,6 +222,7 @@ export default function StudioPage() {
         updated_at: new Date().toISOString(),
       };
     });
+    setStepErrors([]);
   }
 
   function toggleCategory(cat: string) {
@@ -151,6 +244,7 @@ export default function StudioPage() {
         updated_at: new Date().toISOString(),
       };
     });
+    setStepErrors([]);
   }
 
   function setCategoryPrice(cat: string, value: number) {
@@ -166,6 +260,27 @@ export default function StudioPage() {
         updated_at: new Date().toISOString(),
       };
     });
+    setStepErrors([]);
+  }
+
+  /** Parse price field without sticky leading zeros (Number("") || 0 bug). */
+  function onPriceInputChange(cat: string, raw: string) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits === "") {
+      setCategoryPrice(cat, 0);
+      return;
+    }
+    // "025000" → 25000; avoid controlled input re-injecting a leading 0
+    const normalized = digits.replace(/^0+/, "") || "0";
+    setCategoryPrice(cat, Number(normalized));
+  }
+
+  function priceInputDisplay(cat: string, suggested: number): string {
+    const stored = draft.category_prices[cat];
+    if (stored === undefined || stored === null) return String(suggested);
+    // Empty while zero so user can type a fresh amount without a stuck "0"
+    if (stored === 0) return "";
+    return String(stored);
   }
 
   function addWork() {
@@ -188,18 +303,24 @@ export default function StudioPage() {
     setUploadWorkError(null);
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setUploadWorkError("Supabase not configured.");
+      setUploadWorkError(connectionErrorMessage());
       return;
     }
     setUploadingWorks(true);
+    const all = Array.from(files);
+    const truncated = all.length > 12;
+    const batch = all.slice(0, 12);
     const next: PortfolioItem[] = [...draft.works];
     let featuredCount = next.filter((w) => w.is_featured).length;
-    for (const file of Array.from(files).slice(0, 12)) {
+    let ok = 0;
+    let lastErr: string | null = null;
+    for (const file of batch) {
       const result = await uploadCreatorImage(supabase, userId, file, "work");
       if (result.error || !result.url) {
-        setUploadWorkError(result.error || "Upload failed");
+        lastErr = result.error || "Upload failed";
         continue;
       }
+      ok += 1;
       next.push({
         id: `w_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         url: result.url,
@@ -214,6 +335,23 @@ export default function StudioPage() {
     }
     updateLocal({ works: next });
     setUploadingWorks(false);
+
+    if (ok === 0) {
+      setUploadWorkError(lastErr || "Couldn’t upload images. Try smaller JPGs.");
+      return;
+    }
+    if (lastErr) {
+      setUploadWorkError(
+        `Uploaded ${ok} of ${batch.length}. ${lastErr}${
+          truncated ? " (only first 12 files taken)" : ""
+        }`
+      );
+      return;
+    }
+    setUploadWorkError(null);
+    if (truncated) {
+      setStatusMsg("Uploaded 12 images (max per batch). Add more if you need.");
+    }
   }
 
   function removeWork(id: string) {
@@ -232,8 +370,20 @@ export default function StudioPage() {
     if (!userId) return;
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Supabase is not configured.");
+      setError(connectionErrorMessage());
       return;
+    }
+
+    if (opts?.submitForReview) {
+      const incomplete = firstIncompleteStep(draft);
+      if (incomplete !== "review") {
+        goToStep(incomplete);
+        setStepErrors(validateStudioStep(incomplete, draft));
+        setError(
+          "Finish the highlighted step before submitting for review."
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -244,11 +394,7 @@ export default function StudioPage() {
     setSaving(false);
 
     if (!result.ok) {
-      setError(
-        result.error?.includes("column")
-          ? `${result.error} — run migration 00003 in Supabase SQL Editor.`
-          : result.error || "Save failed"
-      );
+      setError(humanizeSaveError(result.error || "Save failed"));
       return;
     }
 
@@ -260,8 +406,8 @@ export default function StudioPage() {
           ? "Listing updated and still live."
           : result.draft?.listing_status === "pending_review"
             ? "Submitted for review. You’ll go live after ROLLR approves your portfolio."
-            : "Saved as draft — finish required quality checks to submit."
-        : "Listing saved to Supabase."
+            : "Saved as draft — finish remaining steps, then submit again."
+        : "Listing saved."
     );
   }
 
@@ -276,18 +422,19 @@ export default function StudioPage() {
 
   return (
     <div className="bg-grid-fade">
-      <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-6xl min-w-0 space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+        {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
               Creator portfolio
             </p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Your portfolio
+              Build your listing
             </h1>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Build and publish your ROLLR listing. Avatar and cover can be
-              uploaded; portfolio stills can use image URLs for now.
+              Step {currentMeta.number} of {STUDIO_STEPS.length} ·{" "}
+              {completedCount}/{requiredSteps} required sections complete
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -296,6 +443,23 @@ export default function StudioPage() {
               <Link href="/list">₹299 plan</Link>
             </Button>
           </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-1.5">
+          <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{
+                width: `${Math.round((completedCount / requiredSteps) * 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Stepper */}
+        <div ref={stepTopRef} className="scroll-mt-20">
+          <StudioStepper current={step} draft={draft} onSelect={goToStep} />
         </div>
 
         {error && (
@@ -312,369 +476,611 @@ export default function StudioPage() {
           </p>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
-            <Card className="border-border bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-base">Basics</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs text-muted-foreground">Name</label>
-                  <Input
-                    value={draft.full_name}
-                    onChange={(e) => updateLocal({ full_name: e.target.value })}
-                    placeholder="Your name / studio"
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs text-muted-foreground">Tagline</label>
-                  <Input
-                    value={draft.tagline}
-                    onChange={(e) => updateLocal({ tagline: e.target.value })}
-                    placeholder="e.g. Wedding films · Bandra"
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs text-muted-foreground">Bio</label>
-                  <textarea
-                    rows={3}
-                    value={draft.bio}
-                    onChange={(e) => updateLocal({ bio: e.target.value })}
-                    placeholder="Tell clients what you shoot/edit (40+ chars to publish)"
-                    className="flex w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm"
-                  />
-                </div>
-                {userId ? (
-                  <>
-                    <div className="sm:col-span-1">
-                      <ImageUploadField
-                        label="Profile photo (avatar)"
-                        kind="avatar"
-                        userId={userId}
-                        value={draft.avatar_url}
-                        onChange={(url) => updateLocal({ avatar_url: url })}
-                        aspectClass="aspect-square"
-                      />
-                    </div>
-                    <div className="sm:col-span-1">
-                      <ImageUploadField
-                        label="Cover image"
-                        kind="cover"
-                        userId={userId}
-                        value={draft.cover_url}
-                        onChange={(url) => updateLocal({ cover_url: url })}
-                        aspectClass="aspect-[16/10]"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-muted-foreground sm:col-span-2">
-                    Sign in to upload photos.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-base">Services & areas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {(["shoot", "edit"] as ServiceMode[]).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => toggleMode(m)}
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium",
-                        draft.service_modes.includes(m)
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      {m === "shoot" ? "Photographer / video" : "Editor / post"}
-                    </button>
-                  ))}
-                </div>
-                <div>
-                  <p className="mb-2 text-xs text-muted-foreground">Areas</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {LOCATIONS.map((loc) => (
-                      <button
-                        key={loc}
-                        type="button"
-                        onClick={() => toggleRegion(loc)}
-                        className={cn(
-                          "rounded-md px-2 py-0.5 text-[11px] font-medium",
-                          draft.sub_regions.includes(loc)
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-muted-foreground"
-                        )}
-                      >
-                        {loc}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-2 text-xs text-muted-foreground">Categories</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SHOOT_CATEGORIES.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => toggleCategory(cat)}
-                        className={cn(
-                          "rounded-md px-2 py-0.5 text-[11px] font-medium",
-                          draft.categories.includes(cat)
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-muted-foreground"
-                        )}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Package prices by category
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Set a <strong className="text-foreground">starting package</strong>{" "}
-                  for each category you offer — not hourly. Clients see “From ₹…”.
-                  Guides are soft Mumbai ballparks; set what you actually charge.
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          {/* Active step */}
+          <div className="min-w-0 space-y-4">
+            <Card className="border-border bg-card/80 overflow-hidden">
+              <CardHeader className="space-y-1 pb-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+                  Step {currentMeta.number}
+                </p>
+                <CardTitle className="text-lg">{currentMeta.title}</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {currentMeta.description}
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {draft.categories.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Select categories above first.
-                  </p>
+                {/* ── Step content ─────────────────────────── */}
+                {step === "about" && (
+                  <div className="grid gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">
+                        Name / studio
+                      </label>
+                      <Input
+                        value={draft.full_name}
+                        onChange={(e) =>
+                          updateLocal({ full_name: e.target.value })
+                        }
+                        placeholder="Your name / studio"
+                        className="bg-background/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">
+                        Tagline
+                      </label>
+                      <Input
+                        value={draft.tagline}
+                        onChange={(e) =>
+                          updateLocal({ tagline: e.target.value })
+                        }
+                        placeholder="e.g. Wedding films · Bandra"
+                        className="bg-background/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-xs text-muted-foreground">
+                          Bio
+                        </label>
+                        <span
+                          className={cn(
+                            "text-[11px] tabular-nums",
+                            draft.bio.trim().length >= 40
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {draft.bio.trim().length}/40 min
+                        </span>
+                      </div>
+                      <textarea
+                        rows={4}
+                        value={draft.bio}
+                        onChange={(e) => updateLocal({ bio: e.target.value })}
+                        placeholder="Tell clients what you shoot/edit (40+ characters)"
+                        className="flex w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
                 )}
-                {draft.categories.map((cat) => {
-                  const guide = getPriceGuide(cat, "shoot");
-                  return (
-                    <div
-                      key={cat}
-                      className="rounded-lg border border-border bg-background/40 p-3"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-medium">{cat}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {guide.unit}
+
+                {step === "photos" && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {userId ? (
+                      <>
+                        <ImageUploadField
+                          label="Profile photo"
+                          kind="avatar"
+                          userId={userId}
+                          value={draft.avatar_url}
+                          onChange={(url) => updateLocal({ avatar_url: url })}
+                          aspectClass="aspect-square"
+                        />
+                        <ImageUploadField
+                          label="Cover image"
+                          kind="cover"
+                          userId={userId}
+                          value={draft.cover_url}
+                          onChange={(url) => updateLocal({ cover_url: url })}
+                          aspectClass="aspect-[16/10]"
+                        />
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground sm:col-span-2">
+                        Sign in to upload photos.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {step === "services" && (
+                  <div className="space-y-5">
+                    <div>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        I offer
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(["shoot", "edit"] as ServiceMode[]).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => toggleMode(m)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-xs font-medium",
+                              draft.service_modes.includes(m)
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-secondary text-muted-foreground"
+                            )}
+                          >
+                            {m === "shoot"
+                              ? "Photographer / video"
+                              : "Editor / post"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs text-muted-foreground">Areas</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {LOCATIONS.map((loc) => (
+                          <button
+                            key={loc}
+                            type="button"
+                            onClick={() => toggleRegion(loc)}
+                            className={cn(
+                              "rounded-md px-2 py-0.5 text-[11px] font-medium",
+                              draft.sub_regions.includes(loc)
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground"
+                            )}
+                          >
+                            {loc}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        Categories
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {SHOOT_CATEGORIES.map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => toggleCategory(cat)}
+                            className={cn(
+                              "rounded-md px-2 py-0.5 text-[11px] font-medium",
+                              draft.categories.includes(cat)
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground"
+                            )}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {step === "pricing" && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      Set a{" "}
+                      <strong className="text-foreground">
+                        starting package
+                      </strong>{" "}
+                      for each category — not hourly. Clients see “From ₹…”.
+                    </p>
+                    {draft.categories.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No categories yet.{" "}
+                        <button
+                          type="button"
+                          className="font-medium text-primary underline-offset-2 hover:underline"
+                          onClick={() => goToStep("services")}
+                        >
+                          Go back to Services
+                        </button>
+                      </p>
+                    )}
+                    {draft.categories.map((cat) => {
+                      const guide = getPriceGuide(cat, "shoot");
+                      return (
+                        <div
+                          key={cat}
+                          className="rounded-lg border border-border bg-background/40 p-3"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-medium">{cat}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {guide.unit}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground">
+                                ₹
+                              </span>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                placeholder={String(guide.suggested)}
+                                value={priceInputDisplay(cat, guide.suggested)}
+                                onChange={(e) =>
+                                  onPriceInputChange(cat, e.target.value)
+                                }
+                                onBlur={() => {
+                                  // If left empty, restore suggested package floor
+                                  const v = draft.category_prices[cat];
+                                  if (v === undefined || v === null || v <= 0) {
+                                    setCategoryPrice(cat, guide.suggested);
+                                  }
+                                }}
+                                className="h-9 w-32 bg-background/50 tabular-nums"
+                              />
+                            </div>
+                          </div>
+                          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                            {guide.hint}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground">₹</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={500}
-                            value={draft.category_prices[cat] ?? guide.suggested}
-                            onChange={(e) =>
-                              setCategoryPrice(cat, Number(e.target.value) || 0)
-                            }
-                            className="h-9 w-32 bg-background/50 tabular-nums"
-                          />
-                        </div>
-                      </div>
-                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                        {guide.hint}
+                      );
+                    })}
+                    {draft.categories.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Directory shows{" "}
+                        <span className="font-medium text-foreground">
+                          {formatFromPrice(
+                            minCategoryPrice(draft.category_prices)
+                          )}
+                        </span>{" "}
+                        (your lowest package floor).
                       </p>
+                    )}
+                  </div>
+                )}
+
+                {step === "portfolio" && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      Min 3 pieces · feature your best 3.{" "}
+                      {uploadSizeHint("work")} · up to 12 at once.
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                      <select
+                        value={workRole}
+                        onChange={(e) =>
+                          setWorkRole(e.target.value as typeof workRole)
+                        }
+                        className="h-9 w-full rounded-md border border-input bg-background/50 px-2 text-sm sm:w-auto"
+                      >
+                        <option value="shoot">Shoot</option>
+                        <option value="edit">Edit</option>
+                        <option value="both">Both</option>
+                      </select>
+                      <input
+                        ref={workFileRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          void uploadWorks(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        className="w-full font-semibold sm:w-auto"
+                        disabled={uploadingWorks || !userId}
+                        onClick={() => workFileRef.current?.click()}
+                      >
+                        {uploadingWorks ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
+                        {uploadingWorks ? "Uploading…" : "Upload images"}
+                      </Button>
                     </div>
-                  );
-                })}
-                {draft.categories.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Directory shows{" "}
-                    <span className="font-medium text-foreground">
-                      {formatFromPrice(minCategoryPrice(draft.category_prices))}
-                    </span>{" "}
-                    (your lowest package floor).
-                  </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        value={workUrl}
+                        onChange={(e) => setWorkUrl(e.target.value)}
+                        placeholder="Or paste https://… image URL"
+                        className="min-w-0 bg-background/50"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={addWork}
+                      >
+                        Add URL
+                      </Button>
+                    </div>
+                    {uploadWorkError && (
+                      <p
+                        className={cn(
+                          "text-xs leading-snug",
+                          uploadWorkError.toLowerCase().includes("uploaded")
+                            ? "text-foreground"
+                            : "text-destructive"
+                        )}
+                      >
+                        {uploadWorkError}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {PRESET_WORKS.map((u) => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setWorkUrl(u)}
+                          className="relative h-12 w-12 overflow-hidden rounded-md border border-border"
+                        >
+                          <Image
+                            src={u}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <ul className="space-y-2">
+                      {draft.works.length === 0 && (
+                        <li className="text-sm text-muted-foreground">
+                          No pieces yet — add at least 3.
+                        </li>
+                      )}
+                      {draft.works.map((w) => (
+                        <li
+                          key={w.id}
+                          className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:gap-3"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-secondary">
+                              <Image
+                                src={w.url}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                                unoptimized={w.url.includes("supabase.co")}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium">
+                                {w.title}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {w.role}
+                                {w.is_featured ? " · featured" : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center justify-end gap-1.5">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => toggleFeatured(w.id)}
+                            >
+                              {w.is_featured ? "Unfeature" : "Feature"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => removeWork(w.id)}
+                              aria-label="Remove"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[11px] text-muted-foreground">
+                      Featured:{" "}
+                      {draft.works.filter((w) => w.is_featured).length}/3
+                      required
+                    </p>
+                  </div>
+                )}
+
+                {step === "review" && (
+                  <div className="space-y-5">
+                    <div className="grid gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">
+                          Portfolio URL{" "}
+                          <span className="text-muted-foreground/70">
+                            (optional)
+                          </span>
+                        </label>
+                        <Input
+                          value={draft.links.portfolio_url ?? ""}
+                          onChange={(e) =>
+                            updateLocal({
+                              links: {
+                                ...draft.links,
+                                portfolio_url: e.target.value,
+                              },
+                            })
+                          }
+                          placeholder="https://yoursite.com"
+                          className="bg-background/50"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">
+                          Instagram URL{" "}
+                          <span className="text-muted-foreground/70">
+                            (optional)
+                          </span>
+                        </label>
+                        <Input
+                          value={draft.links.instagram_url ?? ""}
+                          onChange={(e) =>
+                            updateLocal({
+                              links: {
+                                ...draft.links,
+                                instagram_url: e.target.value,
+                              },
+                            })
+                          }
+                          placeholder="https://instagram.com/you"
+                          className="bg-background/50"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">
+                          Showreel URL{" "}
+                          <span className="text-muted-foreground/70">
+                            (optional)
+                          </span>
+                        </label>
+                        <Input
+                          value={draft.links.showreel_url ?? ""}
+                          onChange={(e) =>
+                            updateLocal({
+                              links: {
+                                ...draft.links,
+                                showreel_url: e.target.value,
+                              },
+                            })
+                          }
+                          placeholder="https://youtube.com/…"
+                          className="bg-background/50"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Summary of remaining issues */}
+                    <div className="rounded-xl border border-border bg-background/40 p-4">
+                      <p className="text-sm font-semibold">Before you submit</p>
+                      <ul className="mt-3 space-y-2">
+                        {STUDIO_STEPS.filter((s) => s.id !== "review").map(
+                          (s) => {
+                            const ok = isStepComplete(s.id, draft);
+                            return (
+                              <li key={s.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!ok) {
+                                      goToStep(s.id);
+                                      setStepErrors(
+                                        validateStudioStep(s.id, draft)
+                                      );
+                                    } else {
+                                      goToStep(s.id);
+                                    }
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-secondary/60"
+                                >
+                                  {ok ? (
+                                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                                  ) : (
+                                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-destructive/50 text-[10px] text-destructive">
+                                      !
+                                    </span>
+                                  )}
+                                  <span
+                                    className={
+                                      ok
+                                        ? "text-muted-foreground"
+                                        : "font-medium text-destructive"
+                                    }
+                                  >
+                                    {s.title}
+                                    {!ok && " — needs attention"}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          }
+                        )}
+                      </ul>
+                      {completedCount < requiredSteps && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-3"
+                          onClick={jumpToFirstIssue}
+                        >
+                          Jump to next issue
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step validation errors */}
+                {stepErrors.length > 0 && (
+                  <div
+                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5"
+                    role="alert"
+                  >
+                    <p className="text-xs font-semibold text-destructive">
+                      Fix these to continue
+                    </p>
+                    <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-xs text-destructive">
+                      {stepErrors.map((err) => (
+                        <li key={err}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-border bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-base">Portfolio on ROLLR</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Min 3 pieces to submit for review. Upload images or paste URLs.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <select
-                    value={workRole}
-                    onChange={(e) =>
-                      setWorkRole(e.target.value as typeof workRole)
-                    }
-                    className="h-9 rounded-md border border-input bg-background/50 px-2 text-sm"
-                  >
-                    <option value="shoot">Shoot</option>
-                    <option value="edit">Edit</option>
-                    <option value="both">Both</option>
-                  </select>
-                  <input
-                    ref={workFileRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      void uploadWorks(e.target.files);
-                      e.target.value = "";
-                    }}
-                  />
+            {/* Nav */}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isFirst}
+                onClick={goBack}
+                className="w-full sm:w-auto"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                  disabled={saving}
+                  onClick={() => void persist()}
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Cloud className="h-4 w-4" />
+                  )}
+                  Save draft
+                </Button>
+                {!isLast ? (
                   <Button
                     type="button"
-                    className="font-semibold"
-                    disabled={uploadingWorks || !userId}
-                    onClick={() => workFileRef.current?.click()}
+                    className="w-full font-semibold sm:w-auto"
+                    onClick={tryNext}
                   >
-                    {uploadingWorks ? (
+                    Continue
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full font-semibold sm:w-auto"
+                    disabled={saving}
+                    onClick={() => void persist({ submitForReview: true })}
+                  >
+                    {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Plus className="h-4 w-4" />
+                      <Check className="h-4 w-4" />
                     )}
-                    {uploadingWorks ? "Uploading…" : "Upload images"}
+                    Submit for review
                   </Button>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    value={workUrl}
-                    onChange={(e) => setWorkUrl(e.target.value)}
-                    placeholder="Or paste https://… image URL"
-                    className="bg-background/50"
-                  />
-                  <Button type="button" variant="outline" onClick={addWork}>
-                    Add URL
-                  </Button>
-                </div>
-                {uploadWorkError && (
-                  <p className="text-xs text-destructive">{uploadWorkError}</p>
                 )}
-                <div className="flex flex-wrap gap-1.5">
-                  {PRESET_WORKS.map((u) => (
-                    <button
-                      key={u}
-                      type="button"
-                      onClick={() => setWorkUrl(u)}
-                      className="relative h-12 w-12 overflow-hidden rounded-md border border-border"
-                    >
-                      <Image src={u} alt="" fill className="object-cover" sizes="48px" />
-                    </button>
-                  ))}
-                </div>
-                <ul className="space-y-2">
-                  {draft.works.length === 0 && (
-                    <li className="text-sm text-muted-foreground">
-                      No pieces yet — add at least 3 to publish.
-                    </li>
-                  )}
-                  {draft.works.map((w) => (
-                    <li
-                      key={w.id}
-                      className="flex items-center gap-3 rounded-lg border border-border p-2"
-                    >
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-secondary">
-                        <Image src={w.url} alt="" fill className="object-cover" sizes="48px" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium">{w.title}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {w.role}
-                          {w.is_featured ? " · featured" : ""}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleFeatured(w.id)}
-                      >
-                        {w.is_featured ? "Unfeature" : "Feature"}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeWork(w.id)}
-                        aria-label="Remove"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-base">Also online (links)</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">
-                    Portfolio URL
-                  </label>
-                  <Input
-                    value={draft.links.portfolio_url ?? ""}
-                    onChange={(e) =>
-                      updateLocal({
-                        links: { ...draft.links, portfolio_url: e.target.value },
-                      })
-                    }
-                    placeholder="https://yoursite.com"
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">
-                    Instagram URL
-                  </label>
-                  <Input
-                    value={draft.links.instagram_url ?? ""}
-                    onChange={(e) =>
-                      updateLocal({
-                        links: { ...draft.links, instagram_url: e.target.value },
-                      })
-                    }
-                    placeholder="https://instagram.com/you"
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">
-                    Showreel URL
-                  </label>
-                  <Input
-                    value={draft.links.showreel_url ?? ""}
-                    onChange={(e) =>
-                      updateLocal({
-                        links: { ...draft.links, showreel_url: e.target.value },
-                      })
-                    }
-                    placeholder="https://youtube.com/…"
-                    className="bg-background/50"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <QualityChecklist
               creator={creator}
@@ -688,86 +1094,60 @@ export default function StudioPage() {
               />
             )}
 
-            {userId && <ReferralPanel userId={userId} />}
-
             <Card className="border-border bg-card">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-base">Preview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-secondary">
-                  {draft.cover_url && (
+                  <Image
+                    src={draft.cover_url || PREVIEW_COVER}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="400px"
+                    unoptimized={(draft.cover_url || "").includes(
+                      "supabase.co"
+                    )}
+                  />
+                </div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-secondary">
                     <Image
-                      src={draft.cover_url}
+                      src={draft.avatar_url || PREVIEW_AVATAR}
                       alt=""
                       fill
                       className="object-cover"
-                      sizes="400px"
+                      sizes="48px"
+                      unoptimized={(draft.avatar_url || "").includes(
+                        "supabase.co"
+                      )}
                     />
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative h-12 w-12 overflow-hidden rounded-full bg-secondary">
-                    {draft.avatar_url && (
-                      <Image
-                        src={draft.avatar_url}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                    )}
                   </div>
-                  <div>
-                    <p className="font-semibold">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">
                       {draft.full_name || "Your name"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="truncate text-xs text-muted-foreground">
                       {draft.tagline || "Your tagline"}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   <Badge variant="secondary">{draft.works.length} works</Badge>
-                  {draft.links.portfolio_url && (
-                    <Badge variant="outline">Has portfolio link</Badge>
-                  )}
+                  <Badge variant="outline">
+                    Step {currentMeta.number}/{STUDIO_STEPS.length}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col gap-2">
-              <Button
-                className="w-full font-semibold"
-                disabled={saving}
-                onClick={() => void persist()}
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Cloud className="h-4 w-4" />
-                    Save to Supabase
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full font-semibold"
-                disabled={saving}
-                onClick={() => void persist({ submitForReview: true })}
-              >
-                Submit for review
-              </Button>
-              <p className="text-center text-[11px] text-muted-foreground">
-                Submit for review when checklist is green. ROLLR approves before
-                you appear in the directory. Sets role to{" "}
-                <strong className="text-foreground">creator</strong> on save.
-              </p>
-            </div>
+            {userId && <ReferralPanel userId={userId} />}
+
+            <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+              Save anytime. Submit when all required steps are green — ROLLR
+              approves before you appear in the directory.
+            </p>
           </div>
         </div>
       </div>

@@ -87,6 +87,17 @@ Follow prompts; then `vercel --prod` for production.
 3. Copy **Project URL** + **anon public** key from **Settings → API** into `.env.local` (see `.env.local.example`)
 4. Restart `npm run dev`
 5. Open [/setup/supabase](http://localhost:3000/setup/supabase) or `GET /api/supabase/health`
+6. **Auth URLs (required for shareable verify emails)** — Supabase → **Authentication** → **URL Configuration**:
+   - **Site URL**: `https://rollrgigs.vercel.app` (your production URL, not `localhost`)
+   - **Redirect URLs** (add all):
+     - `https://rollrgigs.vercel.app/**`
+     - `https://rollrgigs.vercel.app/auth/confirm`
+     - `https://rollrgigs.vercel.app/auth/callback`
+     - `http://localhost:3000/**` (local dev only)
+
+If Site URL stays on `http://localhost:3000`, friends who click “confirm email” get **can’t connect to server** — the link opens on *their* machine, where nothing is running.
+
+Signup emails come from Supabase (not Resend). Users should check spam. They can use **Resend confirmation email** on the sign-in page if the first link expires.
 
 Directory UI still uses mock data until live queries are wired. Auth UI is the next slice after connection works.
 

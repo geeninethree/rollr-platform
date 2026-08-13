@@ -35,9 +35,10 @@ export type StudioDraft = {
   updated_at: string;
 };
 
-const defaultAvatar =
+/** Preview-only placeholders — not treated as real uploads in quality checks */
+export const PREVIEW_AVATAR =
   "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80";
-const defaultCover =
+export const PREVIEW_COVER =
   "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80";
 
 export function emptyStudioDraft(): StudioDraft {
@@ -47,8 +48,8 @@ export function emptyStudioDraft(): StudioDraft {
     full_name: "",
     tagline: "",
     bio: "",
-    avatar_url: defaultAvatar,
-    cover_url: defaultCover,
+    avatar_url: "",
+    cover_url: "",
     starting_price: minCategoryPrice(category_prices),
     edit_starting_price: 5000,
     category_prices,
@@ -85,7 +86,8 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     profile_id: "studio-draft",
     full_name: draft.full_name || "Your name",
     email: "you@studio.local",
-    avatar_url: draft.avatar_url || defaultAvatar,
+    // Keep empty when missing so quality checklist requires a real upload
+    avatar_url: draft.avatar_url || "",
     bio: draft.bio || null,
     starting_price: fromPrice,
     cities: ["Mumbai"],
@@ -94,7 +96,7 @@ export function draftToCreator(draft: StudioDraft): CreatorCardModel {
     is_featured: draft.listing_status === "published",
     sub_status:
       draft.listing_status === "published" ? "active" : "inactive",
-    cover_url: draft.cover_url || defaultCover,
+    cover_url: draft.cover_url || "",
     portfolio: draft.works.filter((w) => w.role !== "edit").map((w) => w.url),
     tagline: draft.tagline || "Your tagline",
     rating: 0,

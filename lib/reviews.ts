@@ -89,11 +89,10 @@ export async function fetchInquiryByReviewToken(
       msg.includes("get_inquiry_for_review_token") ||
       msg.includes("does not exist")
     ) {
-      return {
-        error: `${msg} — run migration 00014_security_hardening.sql`,
-      };
+      console.warn("[rollr] review token load:", msg);
+      return { error: "This review link isn’t available right now." };
     }
-    return { error: msg };
+    return { error: msg.length > 120 ? "Couldn’t open this review link." : msg };
   }
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -156,12 +155,16 @@ export async function submitReview(
       msg.includes("submit_review_with_token") ||
       msg.includes("does not exist")
     ) {
+      console.warn("[rollr] review submit:", msg);
       return {
         ok: false,
-        error: `${msg} — run migration 00014_security_hardening.sql`,
+        error: "Couldn’t submit your review right now. Please try again later.",
       };
     }
-    return { ok: false, error: msg };
+    return {
+      ok: false,
+      error: msg.length > 120 ? "Couldn’t submit review. Try again." : msg,
+    };
   }
 
   return { ok: true };

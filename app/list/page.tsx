@@ -90,7 +90,7 @@ export default function ListProfilePage() {
       const supabase = getSupabaseBrowserClient();
       if (!supabase) {
         setFormError(
-          "Supabase is not configured. Contact the ROLLR team or try again later."
+          "We’re having trouble connecting. Please try again in a moment."
         );
         return;
       }

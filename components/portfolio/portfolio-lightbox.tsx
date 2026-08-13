@@ -27,6 +27,8 @@ export function PortfolioLightbox({
 
   useEffect(() => {
     if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowRight") onIndexChange((index + 1) % items.length);
@@ -34,7 +36,10 @@ export function PortfolioLightbox({
         onIndexChange((index - 1 + items.length) % items.length);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open, index, items.length, onClose, onIndexChange]);
 
   if (!open || !item) return null;
@@ -46,7 +51,7 @@ export function PortfolioLightbox({
       aria-modal="true"
       aria-label="Portfolio viewer"
     >
-      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-zinc-200">
+      <div className="flex items-center justify-between gap-3 px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] text-sm text-zinc-200 sm:px-4 sm:py-3">
         <div className="min-w-0">
           <p className="truncate font-medium text-white">
             {item.title || `${creatorName} · work`}
@@ -54,10 +59,9 @@ export function PortfolioLightbox({
           <p className="text-xs text-zinc-400">
             {index + 1} / {items.length}
             {item.category ? ` · ${item.category}` : ""}
-            {item.role !== "both" ? ` · ${item.role}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {item.video_url && (
             <a
               href={item.video_url}
@@ -66,7 +70,7 @@ export function PortfolioLightbox({
               className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-white/10 hover:text-white"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Open video
+              <span className="hidden sm:inline">Open video</span>
             </a>
           )}
           <button
@@ -80,44 +84,48 @@ export function PortfolioLightbox({
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center px-12 pb-6">
-        <button
-          type="button"
-          className="absolute left-2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:left-4"
-          aria-label="Previous"
-          onClick={() =>
-            onIndexChange((index - 1 + items.length) % items.length)
-          }
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-12 sm:pb-6">
+        {items.length > 1 && (
+          <button
+            type="button"
+            className="absolute left-1 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:left-4"
+            aria-label="Previous"
+            onClick={() =>
+              onIndexChange((index - 1 + items.length) % items.length)
+            }
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
 
         <div
           className={cn(
-            "relative h-full w-full max-w-5xl",
-            "flex items-center justify-center"
+            "relative flex h-full w-full max-w-5xl items-center justify-center px-8 sm:px-0"
           )}
         >
-          <div className="relative aspect-[4/5] w-full max-h-[75vh] sm:aspect-video">
+          <div className="relative h-[min(70vh,100%)] w-full max-w-4xl">
             <Image
               src={item.url}
               alt={item.title || `Work by ${creatorName}`}
               fill
               className="object-contain"
-              sizes="90vw"
+              sizes="100vw"
               priority
+              unoptimized={item.url.includes("supabase.co")}
             />
           </div>
         </div>
 
-        <button
-          type="button"
-          className="absolute right-2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:right-4"
-          aria-label="Next"
-          onClick={() => onIndexChange((index + 1) % items.length)}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
+        {items.length > 1 && (
+          <button
+            type="button"
+            className="absolute right-1 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:right-4"
+            aria-label="Next"
+            onClick={() => onIndexChange((index + 1) % items.length)}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {item.caption && (

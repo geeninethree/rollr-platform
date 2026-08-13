@@ -35,7 +35,7 @@ export default function CreatorGuidePage() {
             Sign up as creator
           </Link>
         </li>
-        <li>Confirm email if Supabase asks for it</li>
+        <li>Confirm your email if we send you a link</li>
         <li>
           Open <strong>Portfolio</strong> (
           <Link href="/studio" className="text-primary">

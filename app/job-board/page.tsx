@@ -82,7 +82,7 @@ export default function JobBoardPage() {
     setError(null);
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Supabase is not configured.");
+      setError("We’re having trouble connecting. Please try again in a moment.");
       setLoading(false);
       return;
     }
@@ -143,11 +143,14 @@ export default function JobBoardPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const flag = new URLSearchParams(window.location.search).get("recruiter");
-    if (flag === "waitlisted") {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("recruiter") === "waitlisted") {
+      // One clear banner; pending card (when loaded) covers the rest
       setInfo(
-        "Recruiter path set. You’re on the multi-job waitlist — you can still post 1 free open job now."
+        "You’re on the multi-job waitlist. You can still post 1 free open job now."
       );
+      url.searchParams.delete("recruiter");
+      window.history.replaceState({}, "", url.pathname + url.search);
     }
   }, []);
 
@@ -847,8 +850,7 @@ function RecruiterWaitlistSection({
 
       {recruiterPending && (
         <p className="mt-3 text-sm text-primary">
-          You already have recruiter role + waitlist pending. Post 1 free job
-          above while you wait.
+          Multi-job waitlist pending — post 1 free job above while you wait.
         </p>
       )}
 
@@ -861,8 +863,8 @@ function RecruiterWaitlistSection({
               at <strong>{email}</strong>
             </>
           ) : null}
-          . Saved for the team — no auto-confirm email yet. Meanwhile, post one
-          free open job anytime.
+          . We&apos;ll activate multi-job when ready — post one free open job
+          anytime.
         </p>
       ) : userId && !recruiterPending ? (
         <div className="mt-4 flex flex-wrap gap-2">

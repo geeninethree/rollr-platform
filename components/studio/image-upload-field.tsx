@@ -5,8 +5,13 @@ import Image from "next/image";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { uploadCreatorImage, type UploadKind } from "@/lib/storage";
+import {
+  uploadCreatorImage,
+  uploadSizeHint,
+  type UploadKind,
+} from "@/lib/storage";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { connectionErrorMessage, kindLabel } from "@/lib/user-messages";
 import { cn } from "@/lib/utils";
 
 type ImageUploadFieldProps = {
@@ -29,45 +34,54 @@ export function ImageUploadField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
   const [showUrl, setShowUrl] = useState(false);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     setError(null);
+    setOkMsg(null);
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Supabase is not configured.");
+      setError(connectionErrorMessage());
       return;
     }
     setUploading(true);
-    const result = await uploadCreatorImage(supabase, userId, file, kind);
-    setUploading(false);
-    if (result.error) {
-      setError(result.error);
-      return;
+    try {
+      const result = await uploadCreatorImage(supabase, userId, file, kind);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.url) {
+        onChange(result.url);
+        setOkMsg(`${kindLabel(kind).replace(/^./, (c) => c.toUpperCase())} uploaded`);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
-    if (result.url) onChange(result.url);
   }
 
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <label className="text-xs font-medium text-muted-foreground">
           {label}
         </label>
         <button
           type="button"
-          className="text-[11px] text-primary hover:underline"
+          className="shrink-0 text-[11px] text-primary hover:underline"
           onClick={() => setShowUrl((v) => !v)}
         >
           {showUrl ? "Hide URL" : "Use URL instead"}
         </button>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex min-w-0 gap-3">
         <div
           className={cn(
-            "relative w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-secondary",
+            "relative w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-secondary sm:w-24",
             aspectClass
           )}
         >
@@ -99,7 +113,7 @@ export function ImageUploadField({
             type="button"
             variant="outline"
             size="sm"
-            className="font-medium"
+            className="max-w-full font-medium"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
           >
@@ -111,17 +125,20 @@ export function ImageUploadField({
             ) : (
               <>
                 <ImagePlus className="h-4 w-4" />
-                Upload {kind}
+                Upload
               </>
             )}
           </Button>
-          <p className="text-[11px] text-muted-foreground">
-            JPG, PNG or WebP · max {kind === "avatar" ? "5" : "8"}MB
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {uploadSizeHint(kind)}
           </p>
           {error && (
-            <p className="text-[11px] text-destructive" role="alert">
+            <p className="text-[11px] leading-snug text-destructive" role="alert">
               {error}
             </p>
+          )}
+          {okMsg && !error && (
+            <p className="text-[11px] text-emerald-400/90">{okMsg}</p>
           )}
         </div>
       </div>
@@ -129,7 +146,10 @@ export function ImageUploadField({
       {showUrl && (
         <Input
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setOkMsg(null);
+          }}
           placeholder="https://…"
           className="bg-background/50 text-xs"
         />

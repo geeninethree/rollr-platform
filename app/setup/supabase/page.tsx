@@ -41,6 +41,12 @@ const steps = [
     title: "Verify connection",
     body: "Use the Test connection button on this page.",
   },
+  {
+    n: 6,
+    title: "Auth URL config (friends / production)",
+    body: "Supabase → Authentication → URL Configuration. Site URL = https://rollrgigs.vercel.app (not localhost). Redirect URLs must include https://rollrgigs.vercel.app/** , /auth/confirm, and /auth/callback. If Site URL is localhost, verify emails open localhost on their phone and show “can’t connect to server”.",
+    href: "https://supabase.com/dashboard/project/_/auth/url-configuration",
+  },
 ];
 
 export default function SupabaseSetupPage() {

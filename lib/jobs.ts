@@ -77,9 +77,11 @@ export async function fetchOpenJobs(
     .order("created_at", { ascending: false });
 
   if (error) {
+    const msg = viaRpc.error?.message || error.message;
+    console.warn("[rollr] fetchOpenJobs:", msg);
     return {
       jobs: [],
-      error: `${viaRpc.error.message || error.message} — run migration 00015_open_jobs_function.sql (and 00009/00013)`,
+      error: "Couldn’t load open jobs. Please refresh and try again.",
     };
   }
   return { jobs: (data || []) as Job[] };

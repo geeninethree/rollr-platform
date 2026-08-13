@@ -4,6 +4,7 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/brand/logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSessionUser } from "@/lib/auth";
+import { humanizeAuthError, safeNextPath } from "@/lib/user-messages";
 
 type PageProps = {
   searchParams?: { next?: string; error?: string };
@@ -16,8 +17,12 @@ export const metadata = {
 
 export default async function LoginPage({ searchParams }: PageProps) {
   const user = await getSessionUser();
-  const next = searchParams?.next || "/";
+  const next = safeNextPath(searchParams?.next, "/");
   if (user) redirect(next);
+
+  const errorMsg = searchParams?.error
+    ? humanizeAuthError(searchParams.error)
+    : null;
 
   return (
     <div className="bg-grid-fade">
@@ -37,9 +42,9 @@ export default async function LoginPage({ searchParams }: PageProps) {
             <CardTitle className="text-base">Sign in</CardTitle>
           </CardHeader>
           <CardContent>
-            {searchParams?.error && (
+            {errorMsg && (
               <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {searchParams.error}
+                {errorMsg}
               </p>
             )}
             <AuthForm mode="login" next={next} />

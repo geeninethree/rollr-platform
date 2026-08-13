@@ -35,7 +35,7 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
       if (!supabase) {
         if (!cancelled) {
           setLive([]);
-          setError("Supabase is not configured.");
+          setError("We’re having trouble connecting. Please try again.");
           setLoading(false);
         }
         return;

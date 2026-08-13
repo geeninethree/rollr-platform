@@ -40,9 +40,12 @@ export function PortfolioGallery({
 
   if (modeWorks.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-        No portfolio pieces for this tab yet.
-      </div>
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold tracking-tight">Portfolio</h2>
+        <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+          No portfolio pieces for this tab yet.
+        </div>
+      </section>
     );
   }
 
@@ -52,14 +55,12 @@ export function PortfolioGallery({
   ];
 
   return (
-    <section className="space-y-4">
+    <section className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-white">
-            Portfolio
-          </h2>
-          <p className="mt-0.5 text-sm text-white/40">
-            {modeWorks.length} pieces · click to enlarge
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight">Portfolio</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {modeWorks.length} pieces · tap to enlarge
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -81,7 +82,7 @@ export function PortfolioGallery({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
         {filtered.map((item, i) => (
           <button
             key={item.id}
@@ -90,7 +91,7 @@ export function PortfolioGallery({
               setIndex(modeWorks.findIndex((w) => w.id === item.id));
               setOpen(true);
             }}
-            className="media-frame group relative aspect-[4/5] max-h-[50vh] min-w-0 overflow-hidden rounded-2xl bg-secondary text-left shadow-lg shadow-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:max-h-none"
+            className="media-frame group relative aspect-[4/5] min-w-0 overflow-hidden rounded-xl bg-secondary text-left shadow-lg shadow-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:rounded-2xl"
           >
             <Image
               src={item.url}
@@ -98,9 +99,9 @@ export function PortfolioGallery({
               fill
               sizes="(max-width: 640px) 50vw, 33vw"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-              style={{ objectFit: "cover" }}
+              unoptimized={item.url.includes("supabase.co")}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-3 pt-10">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-2.5 pt-8 sm:p-3 sm:pt-10">
               <div className="flex flex-wrap gap-1">
                 {item.is_featured && (
                   <Badge className="h-5 bg-primary/90 px-1.5 text-[9px] text-primary-foreground hover:bg-primary/90">
@@ -117,7 +118,7 @@ export function PortfolioGallery({
                 )}
               </div>
               {item.title && (
-                <p className="mt-1 truncate text-[12px] font-medium text-white">
+                <p className="mt-1 truncate text-[11px] font-medium text-white sm:text-[12px]">
                   {item.title}
                 </p>
               )}
