@@ -14,6 +14,12 @@ import {
 import type { SearchFilters, ServiceMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+/** Atmosphere stills — CSS background only (contained, no layout stretch) */
+const HERO_SHOOT =
+  "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1600&q=80";
+const HERO_EDIT =
+  "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1600&q=80";
+
 const SHOOT_CHIPS = ["Wedding", "Corporate", "Portraits", "Nightclub"] as const;
 const EDIT_CHIPS = [
   "Wedding film",
@@ -37,7 +43,7 @@ type Suggestion =
   | { kind: "category"; label: string };
 
 /**
- * Discover command bar — product control, not brochure hero.
+ * Discover hero: atmosphere image + command bar (photographers & editors).
  */
 export function HeroSearch({
   mode,
@@ -51,6 +57,7 @@ export function HeroSearch({
   const active = hasActiveFilters(filters, mode);
   const isEdit = mode === "edit";
   const chips = isEdit ? EDIT_CHIPS : SHOOT_CHIPS;
+  const heroUrl = isEdit ? HERO_EDIT : HERO_SHOOT;
 
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -132,173 +139,204 @@ export function HeroSearch({
   }
 
   return (
-    <section className="relative w-full min-w-0 space-y-6 sm:space-y-8">
-      {/* Title block — typography first */}
-      <div className="max-w-2xl space-y-3">
-        <div
-          className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
-          role="tablist"
-        >
-          <Link
-            href="/"
-            className={cn(
-              "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
-              !isEdit
-                ? "bg-white text-black"
-                : "text-white/50 hover:text-white"
-            )}
+    <section className="relative w-full min-w-0 max-w-full">
+      <div
+        className={cn(
+          "w-full min-w-0 overflow-hidden rounded-[var(--radius-lg)] border border-white/[0.08]",
+          "bg-[hsl(var(--surface-1))] shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)]"
+        )}
+      >
+        <div className="grid min-w-0 lg:grid-cols-2">
+          {/* Atmosphere still — fixed height, CSS cover only */}
+          <div
+            className="media-frame relative h-[200px] w-full max-h-[40vh] min-h-[180px] sm:h-[320px] sm:max-h-[48vh] lg:h-[420px] lg:max-h-none"
+            role="img"
+            aria-label={isEdit ? "Editor workspace" : "Photography"}
+            style={{
+              backgroundColor: "hsl(240 5% 8%)",
+              backgroundImage: `url(${heroUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            Photographers
-          </Link>
-          <Link
-            href="/editors"
-            className={cn(
-              "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
-              isEdit
-                ? "bg-white text-black"
-                : "text-white/50 hover:text-white"
-            )}
-          >
-            Editors
-          </Link>
-        </div>
-
-        <h1 className="text-balance text-[1.85rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-[2.6rem] lg:text-[2.85rem]">
-          {isEdit ? "Find an editor" : "Find a photographer"}
-        </h1>
-        <p className="text-[15px] text-white/45">
-          Mumbai · 0% commission
-          <span className="mx-2 text-white/20">·</span>
-          <span className="text-white/35">
-            {loading
-              ? "Loading…"
-              : `${resultCount} live`}
-          </span>
-        </p>
-      </div>
-
-      {/* Command bar */}
-      <div className="surface-panel p-3 sm:p-4">
-        <div className="flex flex-col gap-3">
-          <div className="relative" ref={wrapRef}>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-white/30" />
-            <Input
-              value={filters.query}
-              onChange={(e) => {
-                onChange({ ...filters, query: e.target.value });
-                setSuggestOpen(true);
+            <div
+              className="pointer-events-none absolute inset-0 z-[1]"
+              style={{
+                background: [
+                  "linear-gradient(to right, transparent 45%, hsl(240 5% 7% / 0.92) 100%)",
+                  "linear-gradient(to top, hsl(240 5% 7% / 0.5) 0%, transparent 50%)",
+                  "linear-gradient(to bottom, hsl(0 0% 0% / 0.2) 0%, transparent 35%)",
+                ].join(", "),
               }}
-              onFocus={() => setSuggestOpen(true)}
-              onKeyDown={(e) => {
-                if (!suggestOpen || suggestions.length === 0) {
-                  if (e.key === "Enter") onSearch();
-                  return;
-                }
-                if (e.key === "ArrowDown") {
-                  e.preventDefault();
-                  setHighlight((h) =>
-                    Math.min(h + 1, suggestions.length - 1)
-                  );
-                } else if (e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setHighlight((h) => Math.max(h - 1, 0));
-                } else if (e.key === "Enter") {
-                  e.preventDefault();
-                  const s = suggestions[highlight];
-                  if (s) applySuggestion(s);
-                  else onSearch();
-                } else if (e.key === "Escape") {
-                  setSuggestOpen(false);
-                }
-              }}
-              placeholder={
-                isEdit
-                  ? "Search editors, reels, colour…"
-                  : "Search area, wedding, corporate…"
-              }
-              className="h-12 border-white/[0.06] bg-black/40 pl-10 text-[15px] placeholder:text-white/30 sm:h-11"
-              autoComplete="off"
             />
-            {suggestOpen && suggestions.length > 0 && (
-              <ul className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-auto rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/60 backdrop-blur-xl">
-                {suggestions.map((s, i) => (
-                  <li key={`${s.kind}-${s.label}`}>
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm",
-                        i === highlight
-                          ? "bg-white/[0.08] text-white"
-                          : "text-white/70 hover:bg-white/[0.04]"
-                      )}
-                      onMouseEnter={() => setHighlight(i)}
-                      onClick={() => applySuggestion(s)}
-                    >
-                      {s.kind === "location" ? (
-                        <MapPin className="h-3.5 w-3.5 text-white/35" />
-                      ) : (
-                        <Tag className="h-3.5 w-3.5 text-white/35" />
-                      )}
-                      {s.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
 
-          {filters.locations.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {filters.locations.map((loc) => (
-                <button
-                  key={loc}
-                  type="button"
-                  onClick={() => removeLocation(loc)}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/80"
+          <div className="flex min-w-0 flex-col justify-center gap-5 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10 lg:min-h-[420px] lg:px-10">
+            <div className="space-y-3">
+              <div
+                className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5 text-xs font-medium"
+                role="tablist"
+              >
+                <Link
+                  href="/"
+                  className={cn(
+                    "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
+                    !isEdit
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:text-white"
+                  )}
                 >
-                  {loc}
-                  <X className="h-3 w-3 opacity-60" />
-                </button>
-              ))}
-            </div>
-          )}
+                  Photographers
+                </Link>
+                <Link
+                  href="/editors"
+                  className={cn(
+                    "rounded-full px-3.5 py-2 text-xs font-medium transition-product sm:py-1.5",
+                    isEdit
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:text-white"
+                  )}
+                >
+                  Editors
+                </Link>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {chips.map((id) => {
-              const selected = filters.categories.includes(id);
-              return (
-                <button
-                  key={id}
+              <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-[2.5rem] lg:text-[2.75rem]">
+                {isEdit ? "Find an editor" : "Find a photographer"}
+              </h1>
+              <p className="text-[15px] text-white/45">
+                Mumbai · 0% commission
+                <span className="mx-2 text-white/20">·</span>
+                <span className="text-white/35">
+                  {loading ? "Loading…" : `${resultCount} live`}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="relative" ref={wrapRef}>
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-white/30" />
+                <Input
+                  value={filters.query}
+                  onChange={(e) => {
+                    onChange({ ...filters, query: e.target.value });
+                    setSuggestOpen(true);
+                  }}
+                  onFocus={() => setSuggestOpen(true)}
+                  onKeyDown={(e) => {
+                    if (!suggestOpen || suggestions.length === 0) {
+                      if (e.key === "Enter") onSearch();
+                      return;
+                    }
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlight((h) =>
+                        Math.min(h + 1, suggestions.length - 1)
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlight((h) => Math.max(h - 1, 0));
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      const s = suggestions[highlight];
+                      if (s) applySuggestion(s);
+                      else onSearch();
+                    } else if (e.key === "Escape") {
+                      setSuggestOpen(false);
+                    }
+                  }}
+                  placeholder={
+                    isEdit
+                      ? "Search editors, reels, colour…"
+                      : "Search area, wedding, corporate…"
+                  }
+                  className="h-12 border-white/[0.08] bg-black/35 pl-10 text-[15px] placeholder:text-white/30 sm:h-11"
+                  autoComplete="off"
+                />
+                {suggestOpen && suggestions.length > 0 && (
+                  <ul className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-auto rounded-2xl border border-white/[0.08] bg-[#121214]/95 py-1 shadow-2xl shadow-black/60 backdrop-blur-xl">
+                    {suggestions.map((s, i) => (
+                      <li key={`${s.kind}-${s.label}`}>
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm",
+                            i === highlight
+                              ? "bg-white/[0.08] text-white"
+                              : "text-white/70 hover:bg-white/[0.04]"
+                          )}
+                          onMouseEnter={() => setHighlight(i)}
+                          onClick={() => applySuggestion(s)}
+                        >
+                          {s.kind === "location" ? (
+                            <MapPin className="h-3.5 w-3.5 text-white/35" />
+                          ) : (
+                            <Tag className="h-3.5 w-3.5 text-white/35" />
+                          )}
+                          {s.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {filters.locations.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {filters.locations.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => removeLocation(loc)}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/80"
+                    >
+                      {loc}
+                      <X className="h-3 w-3 opacity-60" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                {chips.map((id) => {
+                  const selected = filters.categories.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleCategory(id)}
+                      className={cn("chip", selected && "chip-active")}
+                    >
+                      {id}
+                    </button>
+                  );
+                })}
+                {active && (
+                  <button
+                    type="button"
+                    onClick={onClear}
+                    className="text-xs font-medium text-white/40 hover:text-white/70"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="pt-1">
+                <Button
                   type="button"
-                  onClick={() => toggleCategory(id)}
-                  className={cn("chip", selected && "chip-active")}
+                  onClick={onSearch}
+                  size="lg"
+                  className="h-11 rounded-full px-8 font-semibold"
                 >
-                  {id}
-                </button>
-              );
-            })}
-            {active && (
-              <button
-                type="button"
-                onClick={onClear}
-                className="text-xs font-medium text-white/40 hover:text-white/70"
-              >
-                Clear
-              </button>
-            )}
-            <div className="ml-auto">
-              <Button
-                type="button"
-                onClick={onSearch}
-                size="sm"
-                className="h-9 rounded-full px-5 font-semibold"
-              >
-                {loading
-                  ? "…"
-                  : resultCount > 0
-                    ? `See ${resultCount}`
-                    : "See results"}
-              </Button>
+                  {loading
+                    ? "Loading…"
+                    : resultCount > 0
+                      ? `See ${resultCount} result${resultCount === 1 ? "" : "s"}`
+                      : "See results"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -307,7 +345,7 @@ export function HeroSearch({
   );
 }
 
-/** Quiet creator CTA — no gradient shout */
+/** Quiet creator CTA */
 export function CreatorSignupBand() {
   return (
     <div className="flex flex-col items-start justify-between gap-4 rounded-[var(--radius-lg)] border border-white/[0.06] bg-white/[0.02] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
