@@ -23,11 +23,11 @@ export function DemoBanner() {
 
   return (
     <div className="border-b border-white/[0.04] bg-black">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-1 text-[10px] sm:px-6 sm:text-[11px]">
+      <div className="page-shell flex items-center gap-3 py-1.5 text-[11px] sm:text-xs">
         <p className="min-w-0 flex-1 text-muted-foreground">
           <span className="font-medium text-foreground/90">Alpha</span>
           <span className="mx-1.5 text-border">·</span>
-          Free listing for now · manual review · 0% commission
+          List free in alpha · ₹299/mo when billing starts · 0% commission
           <span className="hidden sm:inline">
             {" · "}
             <Link
@@ -40,7 +40,7 @@ export function DemoBanner() {
         </p>
         <button
           type="button"
-          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground pressable"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground pressable"
           aria-label="Dismiss demo banner"
           onClick={() => {
             try {

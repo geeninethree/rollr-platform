@@ -36,6 +36,7 @@ type HeroSearchProps = {
   onSearch: () => void;
   onClear: () => void;
   resultCount: number;
+  loading?: boolean;
 };
 
 type Suggestion =
@@ -48,6 +49,7 @@ export function HeroSearch({
   onChange,
   onSearch,
   onClear,
+  loading = false,
   resultCount,
 }: HeroSearchProps) {
   const active = hasActiveFilters(filters, mode);
@@ -171,9 +173,6 @@ export function HeroSearch({
                 ].join(", "),
               }}
             />
-            <span className="absolute left-4 top-4 z-[2] rounded-full bg-primary px-3 py-1 text-[11px] font-semibold tracking-wide text-primary-foreground shadow-md">
-              Featured
-            </span>
           </div>
 
           <div className="flex min-w-0 flex-col justify-center gap-4 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10 lg:min-h-[400px] lg:px-10">
@@ -187,7 +186,7 @@ export function HeroSearch({
                   className={cn(
                     "rounded-full px-3 py-2 transition-colors sm:px-3.5 sm:py-1.5",
                     !isEdit
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-white text-black"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -198,7 +197,7 @@ export function HeroSearch({
                   className={cn(
                     "rounded-full px-3 py-2 transition-colors sm:px-3.5 sm:py-1.5",
                     isEdit
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-white text-black"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -213,7 +212,9 @@ export function HeroSearch({
                 Mumbai · 0% commission
               </p>
               <p className="text-xs text-white/40 sm:text-sm">
-                {resultCount} available · send a brief from any profile
+                {loading
+                  ? "Loading listings…"
+                  : `${resultCount} available · send a brief from any profile`}
               </p>
             </div>
 
@@ -358,7 +359,11 @@ export function HeroSearch({
                   size="lg"
                   className="h-11 rounded-full px-8 font-semibold"
                 >
-                  Search
+                  {loading
+                    ? "Loading…"
+                    : resultCount > 0
+                      ? `See ${resultCount} result${resultCount === 1 ? "" : "s"}`
+                      : "See results"}
                 </Button>
               </div>
             </div>
@@ -393,9 +398,11 @@ export function CreatorSignupBand() {
               Photographers &amp; editors — list on ROLLR
             </p>
             <p className="max-w-xl text-sm text-white/50">
-              Unlimited briefs. Zero commission on bookings.{" "}
-              <span className="text-primary">₹299/mo</span> when billing is live
-              — build your portfolio free in alpha.
+              Unlimited briefs. Zero commission.{" "}
+              <span className="text-primary">
+                List free in alpha · ₹299/mo when billing starts
+              </span>
+              .
             </p>
           </div>
         </div>

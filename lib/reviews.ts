@@ -178,7 +178,7 @@ export async function fetchPublishedReviews(
   const { data, error } = await supabase
     .from("reviews")
     .select(
-      "id, creator_id, inquiry_id, client_name, client_email, rating, body, is_success_story, success_quote, status, created_at"
+      "id, creator_id, inquiry_id, client_name, rating, body, is_success_story, success_quote, status, created_at"
     )
     .eq("creator_id", creatorId)
     .eq("status", "published")
@@ -197,7 +197,7 @@ export async function fetchSuccessStories(
   const { data, error } = await supabase
     .from("reviews")
     .select(
-      "id, creator_id, inquiry_id, client_name, client_email, rating, body, is_success_story, success_quote, status, created_at"
+      "id, creator_id, inquiry_id, client_name, rating, body, is_success_story, success_quote, status, created_at"
     )
     .eq("creator_id", creatorId)
     .eq("status", "published")

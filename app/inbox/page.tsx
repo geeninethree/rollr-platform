@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { CreatorInbox } from "@/components/inquiry/creator-inbox";
+import { getSessionUser } from "@/lib/auth";
 
 export const metadata = {
   title: "Brief inbox",
@@ -6,7 +8,12 @@ export const metadata = {
     "Creator inbox: accept client briefs and open WhatsApp to the client.",
 };
 
-export default function InboxPage() {
+export default async function InboxPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    redirect("/login?next=/inbox");
+  }
+
   return (
     <div className="bg-grid-fade">
       <CreatorInbox />

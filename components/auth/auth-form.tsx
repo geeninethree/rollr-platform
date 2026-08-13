@@ -121,7 +121,7 @@ export function AuthForm({
       return;
     }
 
-    if (password.length < 6) {
+    if (!password || password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
     }
@@ -428,7 +428,12 @@ export function AuthForm({
           className="bg-background/50"
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
           minLength={6}
+          formNoValidate={false}
         />
+        <p className="text-[11px] text-muted-foreground">
+          Password required for Create account / Sign in. Magic link below works
+          with email only.
+        </p>
       </div>
 
       {error && (

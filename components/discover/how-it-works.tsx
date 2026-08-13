@@ -22,7 +22,7 @@ const clientSteps = [
 const creatorSteps = [
   {
     icon: Sparkles,
-    title: "Build portfolio + list ₹299",
+    title: "Build portfolio + list free",
     body: "Works on ROLLR + optional links.",
   },
   {
@@ -61,10 +61,10 @@ export function HowItWorks() {
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold tracking-tight">For creators</h2>
           <Link
-            href="/studio"
+            href="/signup?role=creator&next=/studio"
             className="text-xs font-semibold text-primary hover:underline"
           >
-            Portfolio →
+            Start listing →
           </Link>
         </div>
         <ol className="mt-3 space-y-3">

@@ -8,7 +8,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { UserMenu } from "@/components/auth/user-menu";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { countPending, INQUIRIES_CHANGED } from "@/lib/inquiries";
+import { fetchMyInquiries, INQUIRIES_CHANGED } from "@/lib/inquiries";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ const publicLinks = [
 ];
 
 const creatorLinks = [
-  { href: "/list", label: "List for ₹299/mo", desc: "Pricing & interest list" },
+  { href: "/list", label: "List free (alpha)", desc: "Pricing · ₹299/mo later" },
   { href: "/studio", label: "Portfolio", desc: "Build your listing" },
   { href: "/inbox", label: "Inbox", desc: "Client briefs" },
 ];
@@ -43,21 +43,17 @@ export function Navbar() {
   const creatorsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const refresh = () => setPending(countPending());
-    refresh();
-    window.addEventListener(INQUIRIES_CHANGED, refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener(INQUIRIES_CHANGED, refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, []);
-
-  useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
 
     let cancelled = false;
+
+    async function loadPending(userId: string) {
+      const result = await fetchMyInquiries(supabase!, userId);
+      if (cancelled) return;
+      const n = result.items.filter((i) => i.status === "pending").length;
+      setPending(n);
+    }
 
     async function loadUser(u: User | null) {
       if (cancelled) return;
@@ -65,6 +61,7 @@ export function Navbar() {
       if (!u) {
         setProfileName("");
         setProfileRole("client");
+        setPending(0);
         return;
       }
 
@@ -85,6 +82,8 @@ export function Navbar() {
         if (data.full_name) setProfileName(data.full_name);
         if (data.role) setProfileRole(data.role);
       }
+
+      void loadPending(u.id);
     }
 
     supabase.auth.getUser().then(({ data }) => {
@@ -97,9 +96,17 @@ export function Navbar() {
       void loadUser(session?.user ?? null);
     });
 
+    const onInquiries = () => {
+      void supabase.auth.getUser().then(({ data }) => {
+        if (data.user) void loadPending(data.user.id);
+      });
+    };
+    window.addEventListener(INQUIRIES_CHANGED, onInquiries);
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      window.removeEventListener(INQUIRIES_CHANGED, onInquiries);
     };
   }, []);
 
@@ -151,7 +158,7 @@ export function Navbar() {
                   className={cn(
                     "rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors whitespace-nowrap pressable",
                     active
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-white text-black"
                       : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                   )}
                 >
@@ -248,7 +255,7 @@ export function Navbar() {
                 )}
               >
                 <Link href="/signup?role=creator&next=/studio">
-                  <span className="hidden sm:inline">List · ₹299/mo</span>
+                  <span className="hidden sm:inline">List free</span>
                   <span className="sm:hidden">List</span>
                 </Link>
               </Button>
@@ -256,7 +263,7 @@ export function Navbar() {
           )}
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-secondary pressable md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-foreground transition-colors hover:bg-white/[0.08] pressable md:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
@@ -337,7 +344,7 @@ export function Navbar() {
                 href="/signup?role=creator&next=/studio"
                 className="block rounded-full border border-primary/70 px-3 py-2.5 text-center text-sm font-semibold text-primary pressable"
               >
-                List on ROLLR · ₹299/mo
+                List free in alpha
               </Link>
             </li>
           </ul>

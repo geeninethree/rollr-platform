@@ -113,29 +113,35 @@ export function countPending(): number {
   return readLocal().filter((i) => i.status === "pending").length;
 }
 
-/** Create brief in Supabase (visible to listing owner). Falls back to localStorage. */
+/**
+ * Create brief in Supabase (visible to listing owner).
+ * Production: hard-fail if remote insert fails (no fake local success).
+ */
 export async function createInquiryRemote(
   supabase: SupabaseClient | null,
   input: SendBriefInput,
   clientUserId?: string | null
 ): Promise<{ inquiry?: Inquiry; error?: string; source: "supabase" | "local" }> {
   if (!supabase) {
-    return { inquiry: createInquiry(input), source: "local" };
+    return {
+      error: "We’re having trouble connecting. Please try again in a moment.",
+      source: "local",
+    };
   }
 
   const payload = {
     creator_id: input.creator_id,
     creator_name: input.creator_name,
-    client_name: input.client_name.trim(),
-    client_whatsapp: input.client_whatsapp.trim(),
-    client_email: input.client_email?.trim() || null,
+    client_name: input.client_name.trim().slice(0, 120),
+    client_whatsapp: input.client_whatsapp.trim().slice(0, 40),
+    client_email: input.client_email?.trim().slice(0, 200) || null,
     client_user_id: clientUserId || null,
     brief_type: input.brief_type,
     event_date: input.event_date || "",
-    location: input.location.trim(),
-    category: input.category,
-    budget: input.budget?.trim() || null,
-    message: input.message.trim(),
+    location: input.location.trim().slice(0, 120),
+    category: input.category.slice(0, 80),
+    budget: input.budget?.trim().slice(0, 80) || null,
+    message: input.message.trim().slice(0, 4000),
     status: "pending",
   };
 
@@ -147,6 +153,7 @@ export async function createInquiryRemote(
 
   if (error) {
     const msg = error.message || "Failed to send brief";
+    console.warn("[rollr] inquiry insert failed:", msg);
     if (msg.includes("RATE_LIMIT")) {
       return {
         error: "Too many briefs from this contact. Please try again later.",
@@ -159,31 +166,14 @@ export async function createInquiryRemote(
         source: "local",
       };
     }
-    // FK fail if creator id not real uuid listing
-    if (
-      msg.includes("foreign key") ||
-      msg.includes("creator_id") ||
-      msg.toLowerCase().includes("relation") ||
-      msg.toLowerCase().includes("does not exist")
-    ) {
-      // Local fallback for demo / missing backend — keep user-facing copy simple
-      console.warn("[rollr] inquiry insert fallback:", msg);
-      const local = createInquiry(input);
-      return {
-        inquiry: local,
-        error:
-          "Saved on this device only — the creator won’t see it elsewhere yet.",
-        source: "local",
-      };
-    }
-    return { error: msg, source: "local" };
+    return {
+      error:
+        "Couldn’t send your brief. Check your connection and try again.",
+      source: "local",
+    };
   }
 
   const inquiry = rowToInquiry(data as Record<string, unknown>);
-  // Mirror to local so nav badge still works without login on same device
-  const all = readLocal().filter((i) => i.id !== inquiry.id);
-  all.unshift(inquiry);
-  writeLocal(all);
   return { inquiry, source: "supabase" };
 }
 

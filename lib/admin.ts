@@ -9,11 +9,8 @@ export function getAdminEmails(): string[] {
   // Never expose allowlist logic via public env in the client bundle path
   if (typeof window !== "undefined") return [];
 
-  const raw =
-    process.env.ADMIN_EMAILS ||
-    // Legacy server fallback only (prefer ADMIN_EMAILS without NEXT_PUBLIC_)
-    process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
-    "";
+  // Server-only. Never use NEXT_PUBLIC_* for admin allowlist (ships to browser).
+  const raw = process.env.ADMIN_EMAILS || "";
   return raw
     .split(",")
     .map((e) => e.trim().toLowerCase())

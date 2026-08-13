@@ -22,8 +22,17 @@ export function maxMbForKind(kind: "avatar" | "cover" | "work"): number {
 /** Safe path for post-auth redirects (no open redirects). */
 export function safeNextPath(next: string | null | undefined, fallback = "/"): string {
   if (!next) return fallback;
-  if (!next.startsWith("/") || next.startsWith("//")) return fallback;
-  return next;
+  const cleaned = next.trim().replace(/\\/g, "/");
+  if (!cleaned.startsWith("/") || cleaned.startsWith("//")) return fallback;
+  if (cleaned.includes("://") || cleaned.includes("\0")) return fallback;
+  // Same-origin path only
+  try {
+    const u = new URL(cleaned, "https://rollrgigs.vercel.app");
+    if (u.origin !== "https://rollrgigs.vercel.app") return fallback;
+    return u.pathname + u.search + u.hash;
+  } catch {
+    return fallback;
+  }
 }
 
 export function humanizeAuthError(raw: string | null | undefined): string {

@@ -310,12 +310,32 @@
   }
 
   .pressable {
-    @apply transition-transform active:scale-[0.98];
+    @apply transition-transform active:scale-[0.98] motion-reduce:transform-none;
   }
 
   /* Frosted nav panel */
   .nav-frost {
     @apply border-b border-white/[0.06] bg-black/70 backdrop-blur-2xl
       supports-[backdrop-filter]:bg-black/55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-delay-1,
+  .animate-rise-delay-2,
+  .animate-rise-delay-3,
+  .animate-rise-delay-4,
+  .animate-rise-delay-5,
+  .animate-rise-delay-6 {
+    animation: none !important;
+  }
+
+  .skeleton::after {
+    animation: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }

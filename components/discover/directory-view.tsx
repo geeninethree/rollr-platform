@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import { CreatorGrid } from "@/components/discover/creator-grid";
 import {
   CreatorSignupBand,
@@ -10,6 +9,7 @@ import {
 } from "@/components/discover/hero-search";
 import { HowItWorks } from "@/components/discover/how-it-works";
 import { Button } from "@/components/ui/button";
+import { CreatorCardSkeleton } from "@/components/ui/skeleton";
 import { fetchPublishedCreators } from "@/lib/directory";
 import { EMPTY_FILTERS, filterCreators } from "@/lib/filters";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -72,11 +72,16 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
               ?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
           resultCount={creators.length}
+          loading={loading}
         />
 
         <CreatorSignupBand />
 
-        <section id="directory-results" className="space-y-6 scroll-mt-24">
+        <section
+          id="directory-results"
+          className="space-y-6 scroll-mt-24"
+          aria-busy={loading}
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="space-y-1">
               <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
@@ -84,13 +89,10 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
               </h2>
               <p className="text-sm text-white/40">
                 {loading
-                  ? "Loading…"
+                  ? "Loading listings…"
                   : `${creators.length} live listing${creators.length === 1 ? "" : "s"}`}
               </p>
             </div>
-            {loading && (
-              <Loader2 className="h-4 w-4 animate-spin text-white/40" />
-            )}
           </div>
 
           {error && (
@@ -99,15 +101,20 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
             </p>
           )}
 
-          {!loading && creators.length === 0 && !error ? (
+          {loading ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <CreatorCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : creators.length === 0 && !error ? (
             <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-14 text-center sm:px-6 sm:py-20">
               <p className="text-base font-medium text-white sm:text-lg">
                 Creators onboarding
               </p>
               <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/45">
                 Alpha: we manually review every portfolio before it goes live.
-                Photographers &amp; editors — list free for now, we&apos;ll
-                publish when you look solid.
+                List free in alpha · ₹299/mo when billing starts.
               </p>
               <div className="mt-6 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
                 <Button asChild className="w-full font-semibold sm:w-auto">
@@ -127,9 +134,7 @@ export function DirectoryView({ mode }: DirectoryViewProps) {
               eventDate={filters.eventDate || undefined}
               onClearFilters={() => setFilters(EMPTY_FILTERS)}
               emptyTitle={
-                isEdit
-                  ? "No editors match"
-                  : "No photographers match"
+                isEdit ? "No editors match" : "No photographers match"
               }
               emptyBody="Try another search or clear filters."
             />

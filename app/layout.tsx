@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: "%s · ROLLR",
   },
   description:
-    "Book Mumbai photographers and editors with 0% commission. Creators list for ₹299/mo — unlimited briefs.",
+    "Book Mumbai photographers and editors with 0% commission. List free in alpha · ₹299/mo when billing starts.",
   applicationName: "ROLLR",
   keywords: [
     "Mumbai photographer",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ROLLR — Mumbai visual creators",
     description:
-      "Zero commission. Direct after accept. List for ₹299/mo.",
+      "Zero commission. Direct after accept. List free in alpha.",
     locale: "en_IN",
     type: "website",
     siteName: "ROLLR",

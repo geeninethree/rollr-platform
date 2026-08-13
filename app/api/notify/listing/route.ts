@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { listingStatusEmail, sendEmail } from "@/lib/email";
+import {
+  clientIp,
+  getRouteSupabase,
+  getServiceSupabase,
+  rateLimit,
+} from "@/lib/server-supabase";
 
 type Body = {
   listing_id: string;
@@ -8,10 +13,19 @@ type Body = {
 };
 
 /**
- * POST after admin sets listing status — emails the creator (Resend if configured).
+ * POST after admin sets listing status. Requires authenticated admin.
  */
 export async function POST(req: Request) {
   try {
+    const ip = clientIp(req);
+    const rl = rateLimit(`notify-listing:${ip}`, 30, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const body = (await req.json()) as Body;
     if (!body.listing_id || !body.status) {
       return NextResponse.json(
@@ -26,28 +40,54 @@ export async function POST(req: Request) {
       );
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) {
+    const userSb = getRouteSupabase();
+    if (!userSb) {
       return NextResponse.json(
-        { ok: false, error: "Supabase not configured" },
+        { ok: false, error: "Auth not configured" },
         { status: 500 }
       );
     }
 
-    const supabase = createClient(url, key);
+    const {
+      data: { user },
+    } = await userSb.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
 
-    // Reuse notify RPC pattern: get email by creator listing id
-    const { data: emailRpc, error: rpcError } = await supabase.rpc(
+    const { data: prof } = await userSb
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!prof?.is_admin) {
+      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const service = getServiceSupabase();
+    if (!service) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Notify not configured (missing SUPABASE_SERVICE_ROLE_KEY)",
+          skipped: true,
+        },
+        { status: 503 }
+      );
+    }
+
+    const { data: emailRpc, error: rpcError } = await service.rpc(
       "creator_notify_email",
       { p_creator_id: body.listing_id }
     );
 
     if (rpcError) {
-      return NextResponse.json({
-        ok: false,
-        error: `${rpcError.message} — run migration 00008`,
-      });
+      console.warn("[notify/listing] rpc", rpcError.message);
+      return NextResponse.json(
+        { ok: false, error: "Could not resolve creator contact" },
+        { status: 500 }
+      );
     }
 
     const to = (emailRpc as string | null) || null;
@@ -55,25 +95,25 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: false,
         error: "Creator email not found",
+        skipped: true,
       });
     }
 
-    // Name for email (best-effort; public published only may fail for pending — use RPC path only for email)
     let creatorName = "there";
-    const { data: listing } = await supabase
+    const { data: listing } = await service
       .from("creator_profiles")
       .select("id, profiles(full_name)")
       .eq("id", body.listing_id)
       .maybeSingle();
 
-    const prof = listing?.profiles as
+    const profJoin = listing?.profiles as
       | { full_name?: string }
       | { full_name?: string }[]
       | null;
-    if (prof && !Array.isArray(prof) && prof.full_name) {
-      creatorName = prof.full_name;
-    } else if (Array.isArray(prof) && prof[0]?.full_name) {
-      creatorName = prof[0].full_name;
+    if (profJoin && !Array.isArray(profJoin) && profJoin.full_name) {
+      creatorName = profJoin.full_name;
+    } else if (Array.isArray(profJoin) && profJoin[0]?.full_name) {
+      creatorName = profJoin[0].full_name;
     }
 
     const site =

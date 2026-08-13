@@ -440,7 +440,7 @@ export default function StudioPage() {
           <div className="flex flex-wrap items-center gap-2">
             <ListingStatusBadge status={draft.listing_status} />
             <Button asChild variant="outline" size="sm">
-              <Link href="/list">₹299 plan</Link>
+              <Link href="/list">Pricing</Link>
             </Button>
           </div>
         </div>

@@ -78,6 +78,7 @@ export function SendBriefDialog({
   const [usingSaved, setUsingSaved] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -89,6 +90,7 @@ export function SendBriefDialog({
     setBriefType(defaultType(creator, defaultBriefType, surface));
     setSubmittedId(null);
     setError("");
+    setSubmitting(false);
 
     const saved = getSavedClientBrief();
     if (saved && (saved.client_name || saved.client_whatsapp)) {
@@ -133,6 +135,7 @@ export function SendBriefDialog({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setError("");
     if (!clientName.trim() || !clientWhatsapp.trim() || !message.trim()) {
       setError("Name, WhatsApp, and a short brief are required.");
@@ -141,6 +144,10 @@ export function SendBriefDialog({
     const digits = clientWhatsapp.replace(/\D/g, "");
     if (digits.length < 10) {
       setError("Enter a valid WhatsApp number (10+ digits).");
+      return;
+    }
+    if (message.trim().length > 4000) {
+      setError("Brief is too long (max 4000 characters).");
       return;
     }
 
@@ -157,45 +164,40 @@ export function SendBriefDialog({
       setUsingSaved(true);
     }
 
-    const supabase = getSupabaseBrowserClient();
-    let clientUserId: string | null = null;
-    if (supabase) {
-      const { data } = await supabase.auth.getUser();
-      clientUserId = data.user?.id ?? null;
-    }
+    setSubmitting(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      let clientUserId: string | null = null;
+      if (supabase) {
+        const { data } = await supabase.auth.getUser();
+        clientUserId = data.user?.id ?? null;
+      }
 
-    const result = await createInquiryRemote(
-      supabase,
-      {
-        creator_id: creator.id,
-        creator_name: creator.full_name,
-        client_name: clientName,
-        client_whatsapp: clientWhatsapp,
-        client_email: clientEmail,
-        brief_type: briefType,
-        event_date: eventDate,
-        location,
-        category,
-        budget,
-        message,
-      },
-      clientUserId
-    );
-
-    if (!result.inquiry) {
-      setError(result.error || "Could not send brief.");
-      return;
-    }
-    // Local-only fallback: success UI with a soft note (not a red tech error)
-    if (result.source === "local") {
-      setError(
-        "Note: saved on this device only for now. The creator may not see it on other devices."
+      const result = await createInquiryRemote(
+        supabase,
+        {
+          creator_id: creator.id,
+          creator_name: creator.full_name,
+          client_name: clientName,
+          client_whatsapp: clientWhatsapp,
+          client_email: clientEmail,
+          brief_type: briefType,
+          event_date: eventDate,
+          location,
+          category,
+          budget,
+          message,
+        },
+        clientUserId
       );
-    }
-    setSubmittedId(result.inquiry.id);
 
-    // Email creator (Resend if configured) — fire and forget
-    if (result.source === "supabase") {
+      if (!result.inquiry || result.source !== "supabase") {
+        setError(result.error || "Could not send brief. Please try again.");
+        return;
+      }
+
+      setSubmittedId(result.inquiry.id);
+
       void fetch("/api/notify/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -207,8 +209,11 @@ export function SendBriefDialog({
           location,
           event_date: eventDate,
           message: message.trim(),
+          inquiry_id: result.inquiry.id,
         }),
       }).catch(() => undefined);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -226,6 +231,20 @@ export function SendBriefDialog({
     setSaveForNext(true);
   }
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onOpenChange, submitting]);
+
   const dialog = (
     <div
       className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4"
@@ -237,7 +256,8 @@ export function SendBriefDialog({
         type="button"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         aria-label="Close"
-        onClick={() => onOpenChange(false)}
+        disabled={submitting}
+        onClick={() => !submitting && onOpenChange(false)}
       />
       <div className="relative z-10 flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-2xl sm:rounded-2xl">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
@@ -262,9 +282,10 @@ export function SendBriefDialog({
           </div>
           <button
             type="button"
-            onClick={() => onOpenChange(false)}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            onClick={() => !submitting && onOpenChange(false)}
+            className="min-h-11 min-w-11 rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
             aria-label="Close dialog"
+            disabled={submitting}
           >
             <X className="h-4 w-4" />
           </button>
@@ -281,16 +302,15 @@ export function SendBriefDialog({
                 <p className="text-muted-foreground">
                   <strong className="text-foreground">Watch WhatsApp</strong> —
                   that&apos;s where they&apos;ll message you if they take the
-                  job.
+                  job. Creators usually reply within 24–48 hours.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  They&apos;ll also see this in their ROLLR Inbox (and get an
-                  email if we have Resend set up). No need for you to chase
-                  their public number.
+                  They&apos;ll also see this in their ROLLR Inbox. No need for
+                  you to chase their public number.
                 </p>
                 <p className="text-[11px] text-muted-foreground">
                   Ref{" "}
-                  <span className="font-mono">{submittedId}</span>
+                  <span className="font-mono">{submittedId.slice(0, 8)}…</span>
                   {saveForNext || usingSaved
                     ? " · Your details were saved for the next brief."
                     : ""}
@@ -532,13 +552,15 @@ export function SendBriefDialog({
               <Button
                 type="submit"
                 className="h-11 w-full font-semibold sm:h-9 sm:w-auto"
+                disabled={submitting}
               >
-                Send brief
+                {submitting ? "Sending…" : "Send brief"}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 className="h-11 w-full sm:h-9 sm:w-auto"
+                disabled={submitting}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
